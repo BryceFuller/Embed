@@ -1,4 +1,4 @@
-# Checking the version of PYTHON; we only support > 3.5
+# Checself=Noneversion of PYTHON; we only support > 3.5
 import sys
 import re
 
@@ -27,39 +27,95 @@ Q_program.set_api(Qconfig.APItoken, Qconfig.config["url"])  # set the APIToken a
 numQubits = 5;
 coupling_map = {1: [0], 2: [0, 1, 4], 3: [2, 4]};
 inputQASM = ["qreg q[2];", "creg c[2];","h q[0];","cx q[1],q[0];","z q[0];","cx q[0],q[1];","h q[0];","measure q[0] -> c[0];","measure q[1] -> c[1];"];
+#Global Map initializes to identity map
+GlobalMap = {i: i for i in range(0, numQubits-1)};
 
-#/////////////////
-#
 
-class localMapping:
-    def __init__(self, start):
-        startIndex = start;
-        finalIndex = 0;
-        localMap = {};
+#The circuit will be 'cut' into individually embeddable
+#segments. This structure holds the information relating
+#each individual segment to it's previous segment.
+#This includes the start and end indices, as well as the
+#local qubit mapping from the previous segment to the current one.
+class embeddableSegment:
+    #finalIndex;
+    def __init__(self, start, qubit_map):
+        self.startIndex = start;
+        self.finalIndex = 0;
+        self.localMap = qubit_map;
 
-def parseQASM():
-    print("AAAAAH");
+#Returns an identity map of size numQubits.
+def identityMap():
+    identity = {}
+    for i in numQubits:
+        identity[i] = i;
+    return identity;
 
-def isLegal(targets):
 
-    if(targets[0] in coupling_map):
-        if(coupling_map[targets[0]].__contains__(targets[1])):
-            print("true");
-            return True;
-    else:
-        print("false");
-        return False;
-
-#isLegal(inputQASM[3]);
-
-for x in inputQASM:
-    print(x);
-    operation = x.partition(' ')[0];
+#This function takes as input a mapping, and an invalid
+#operation, and returns a local mapping which will render the
+#operation valid.
+def findLocalMapping(instruction):
     targets = (re.findall('\d+', x));
     targets = [int(y) for y in targets];
-    if(operation == "cx"):
-        print("Is Checking:")
-        isLegal(targets);
+    localMap = identityMap();
+    if(targets[0] in coupling_map):
+        controlee = coupling_map[targets[0]][0]; #Room Here to implement smarter choice of swap qubit.
+        localMap[controlee] = targets[1];
+        localMap[targets[1]] = controlee;
+    else:
+        #see if there's a controller that can control target[1]
+        #if there isn't, pick a new pair to map to.
+
+
+#Takes in a QASM command and
+#outputs true if this command is valid within
+#the topology defined by
+def isLegal(instruction):
+    #print();
+    #print(instruction);
+    operation = instruction.partition(' ')[0];
+    targets = (re.findall('\d+', x));
+    targets = [int(y) for y in targets];
+    #print("INPUT:" + operation + "–" + str(targets));
+    #Run targets through global mapping
+    if (operation == "cx"):
+
+        if(targets[0] in coupling_map):
+            if(coupling_map[targets[0]].__contains__(targets[1])):
+                print("CX: valid");
+                return True;
+        else:
+            print("CX: invalid");
+            return False;
+
+    else:
+        return True;
+
+#//////////////////////////////
+
+CircuitMappings = {};
+num_segments = 1;
+QASMindex = 0;
+currentMap = GlobalMap;
+#initialize map to Identity
+
+
+CircuitMappings[num_segments-1] = embeddableSegment(QASMindex, currentMap);
+
+for x in inputQASM:
+    if(isLegal(x)):
+        currentSegment = CircuitMappings[num_segments-1];
+        currentSegment.finalIndex += 1;
+    else: #Handle segment break
+
+        #Get local map between previous and current segment
+        #Upadte global map
+        currentMap = currentMap.deepcopy();
+
+        CircuitMappings.add(embeddableSegment(QASMindex));
+        num_segments += 1;
+
+    QASMindex += 1;
 
 #/////////////////
 # Creating registers
