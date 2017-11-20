@@ -28,7 +28,7 @@ numQubits = 5;
 coupling_map = {1: [0], 2: [0, 1, 4], 3: [2, 4]};
 inputQASM = ["qreg q[2];", "creg c[2];","h q[0];","cx q[1],q[0];","z q[0];","cx q[0],q[1];","h q[0];","measure q[0] -> c[0];","measure q[1] -> c[1];"];
 #Global Map initializes to identity map
-GlobalMap = {i: i for i in range(0, numQubits-1)};
+GlobalMap = {i: i for i in range(0, numQubits)};
 
 
 #The circuit will be 'cut' into individually embeddable
@@ -46,6 +46,7 @@ class embeddableSegment:
 #Returns an identity map of size numQubits.
 def identityMap():
     identity = {}
+
     for i in numQubits:
         identity[i] = i;
     return identity;
@@ -63,6 +64,7 @@ def findLocalMapping(instruction):
         localMap[controlee] = targets[1];
         localMap[targets[1]] = controlee;
     else:
+        print();
         #see if there's a controller that can control target[1]
         #if there isn't, pick a new pair to map to.
 
@@ -101,34 +103,49 @@ currentMap = GlobalMap;
 
 
 CircuitMappings[num_segments-1] = embeddableSegment(QASMindex, currentMap);
+print("running");
 
-for x in inputQASM:
+'''for x in inputQASM:
     if(isLegal(x)):
+        print("numsegments = " + str(num_segments));
         currentSegment = CircuitMappings[num_segments-1];
         currentSegment.finalIndex += 1;
     else: #Handle segment break
-
+        print("ELSE!!!");
         #Get local map between previous and current segment
         #Upadte global map
-        currentMap = currentMap.deepcopy();
-
-        CircuitMappings.add(embeddableSegment(QASMindex));
+        currentMap = currentMap.copy();
+        #CircuitMappings = CircuitMappings + {num_segments: embeddableSegment};
+        #print(CircuitMappings.values());
+        print(" " + str(QASMindex) + " " + str(num_segments));
+        CircuitMappings[num_segments-1] = embeddableSegment(QASMindex, coupling_map);
         num_segments += 1;
 
     QASMindex += 1;
-
+'''
 #/////////////////
 # Creating registers
-q = Q_program.create_quantum_register("q", 2)
-c = Q_program.create_classical_register("c", 2)
+q = Q_program.create_quantum_register("q", 4)
+c = Q_program.create_classical_register("c", 4)
 
 # Quantum circuit to make the shared entangled state
 superdense = Q_program.create_circuit("superdense", [q], [c])
 
 # For Running this on qx2
+superdense.h(q[3])
 superdense.h(q[0])
 superdense.cx(q[0], q[1])
 
 # For Running on qx4
 # superdense.h(q[1])
 # superdense.cx(q[1], q[0])
+
+superdense.z(q[0])
+superdense.cx(q[0], q[1])
+superdense.h(q[0])
+superdense.measure(q[0], c[0])
+superdense.measure(q[1], c[1])
+circuits = ["superdense"]
+var = superdense.regs['q'].size
+print(Q_program.get_qasms(circuits)[0])
+
