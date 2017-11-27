@@ -118,11 +118,14 @@ class Circuit(object):
                 if (map.keys().contains(target)):
                     endFixed = True
 
-
                 #Get Embeddings
                 if startFixed == False & endFixed == False:
                     for qubit1 in EmbedHelper.coupling:
+                        if map.contains(qubit1):
+                            continue
                         for qubit2 in EmbedHelper.coupling[qubit1]:
+                            if map.contains(qubit2):
+                                continue
                             if EmbedHelper.isValid(qubit1,qubit2):
                                 map[control] = qubit1
                                 map[target] = qubit2
@@ -132,6 +135,8 @@ class Circuit(object):
                 if startFixed == False & endFixed == True:
                     qubit1 = map[control]
                     for qubit2 in EmbedHelper.coupling[qubit1]:
+                        if map.contains(qubit2):
+                            continue
                         if EmbedHelper.isValid(qubit1, qubit2):
                             map[target] = qubit2
                             subsegment.globals.add(map)
@@ -140,6 +145,8 @@ class Circuit(object):
                 if startFixed == True & endFixed == False:
                     qubit2 = map[target]
                     for qubit1 in EmbedHelper.coupling:
+                        if map.contains(qubit1):
+                            continue
                         if EmbedHelper.isValid(qubit1, qubit2):
                             map[control] = qubit1
                             subsegment.globals.add(map)
