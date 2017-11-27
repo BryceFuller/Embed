@@ -136,6 +136,21 @@ superdense.h(q[3])
 superdense.h(q[0])
 superdense.cx(q[0], q[1])
 
+class hashabledict(dict):
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
+
+dict1 = {}
+dict2 = {}
+dict1[1] = (2, 1)
+dict2[3] = 1
+
+dict1[3] = 1
+dict2[1] = (2, 1)
+
+print(hash(hashabledict(dict1)))
+print(hash(hashabledict(dict2)))
+
 # For Running on qx4
 # superdense.h(q[1])
 # superdense.cx(q[1], q[0])

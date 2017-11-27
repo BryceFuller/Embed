@@ -5,30 +5,44 @@ from EMBED.EmbedHelper import Circuit
 class EmbedAlgorithm(object):
 
 
-    def GreedyAlgorithm(self, QCircuit, Coupling):
+    def GreedyAlgorithm(self, QCircuit, Coupling, helpers):
 
         numQubits = QCircuit.regs['q'].size
         instructions = EmbedHelper.reformatInstruction(QCircuit)
         global_map = Circuit.getValidMap(instructions[0], Coupling);
         result = Circuit(numQubits);
+        segments = []
 
-        #Build Intermediate representation of reformatted circuit
-        result.addSegment(0, global_map);
-        segmentIndex = 0;
+        #Instantiate first segment object
 
 
-        for i in range(1, len(instructions)):
-            currentSegment = result.segments[segmentIndex]
-            global_map = currentSegment.global_map
-            ReMappedInstr = EmbedHelper.reMap(i, global_map)
+        for start in range(1, len(instructions)):
 
-            if(EmbedHelper.isValid(ReMappedInstr)):
-                currentSegment.extend()
-            else:
-                local_map = Circuit.getValidMap(instructions[i], Coupling)
-                result.addSegment(i,local_map)
-                segmentIndex += 1
-                print("newSegment")
+
+
+            # greedily grow segement
+            segment = result.getSegment(start, end)
+
+            while len(segment.global_maps) > 0:
+                end = end + 1
+                segment = helpers.getSegment(start, end, segment)
+
+            start = segment.end + 1
+
+            # make sure segment only contain one global map
+            prv_global_map = segments[-1].global_maps[0]
+            # get best global map relative to previous global map
+            #TODO implement cost()
+            best_global_map = segment.global_maps[0]
+            best_cost = helpers.localmap(prv_global_map, segment.global_maps[0])
+            for i in range(1, len(segment.global_maps)):
+                cost = helpers.localmap(prv_global_map, segment.global_maps[i])
+                if cost < best_cost:
+                    best_global_map = segment.global_maps[i]
+
+            segment.global_maps = [best_global_map]
+
+            segments.append(segment)
 
 
 
