@@ -19,8 +19,10 @@ class Instruction(object):
     def __init__(self, instruction):
         operation = instruction.name
         qubits = []
+        bits = []
         for i in len(instruction.arg):
             qubits[i] = instruction.arg[i][1];
+
         #TODO keep track of classical bits also
 """
 The Circuit object Holds a list of Segment objects.
@@ -58,33 +60,7 @@ class Circuit(object):
         numSegments = 0
 
 
-    def addSegment(self, index, local_map):
-
-        self.currentGlobal = Circuit.reMap(self.currentGlobal, local_map)
-        self.segments.add(Segment(index, local_map, self.currentGlobal))
-        self.numSegments += 1
-
-    def getIdentityMap(self, numQubits):
-        map = {}
-        # Return empty map for 0 qubits
-        if (numQubits == 0): return map
-
-        for i in range(0, numQubits):
-            map[i] = i
-        return map
-
-    #TODO Figure out neccesary arguments and design optimal algorithm for this.
-    def getValidMap(self, instruction, coupling):
-
-        for keys in coupling:
-            print()
-            #TODO find a valid mapping
-
-
-        print("Do Magic")
-
-
-    #Permutes the map target according to the mapping rule
+    #Applies rule mapping to target
     def reMap(self, target, rule):
         if(len(target) != len(rule)):
             print("Error in map dimensions")
@@ -97,7 +73,7 @@ class Circuit(object):
     def mapInstruction(self, instruction, map):
         result = copy.deepcopy(instruction)
         for i in len(instruction):
-            result[1] = map[result[1]]
+            result[i] = map[result[i]]
         return result
 
     def getSegment(self, start, end, subsegment=None):
@@ -192,6 +168,7 @@ class EmbedHelper(object):
         self.coupling = coupling
         self.QCircuit = QCircuit
         self.Instructions = self.reformatInstructions(QCircuit)
+        self.segments = []
 
 
     def isValid(self, qubit1, qubit2):

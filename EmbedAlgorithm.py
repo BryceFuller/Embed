@@ -5,13 +5,13 @@ from EMBED.EmbedHelper import Circuit
 class EmbedAlgorithm(object):
 
 
-    def GreedyAlgorithm(self, QCircuit, Coupling, helpers):
+    def Greedy(self, helpers):
+        QCircuit = helpers.QCircuit
+        Coupling = helpers.Coupling
 
         numQubits = QCircuit.regs['q'].size
-        instructions = EmbedHelper.reformatInstruction(QCircuit)
-        global_map = Circuit.getValidMap(instructions[0], Coupling);
-        result = Circuit(numQubits);
-        segments = []
+        instructions = helpers.Instructions
+        segments = helpers.segments
 
         #Instantiate first segment object
 
