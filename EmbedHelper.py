@@ -17,12 +17,14 @@ EX: COMPLICATED_GATE(q[1], q[4], c[3], q[71])
 class Instruction(object):
 
     def __init__(self, instruction):
-        operation = instruction.name
-        qubits = []
-        bits = []
-        for i in len(instruction.arg):
-            qubits[i] = instruction.arg[i][1];
+        self.operation = instruction.name
 
+
+        self.qubits = []
+        self.bits = []
+        for i in range(0,len(instruction.arg)):
+            self.qubits.append(instruction.arg[i][1])
+        return
         #TODO keep track of classical bits also
 """
 The Circuit object Holds a list of Segment objects.
@@ -33,39 +35,48 @@ segments initializes to having no elements
 GlobalMap initializes to the identity
 """
 class Segment(object):
-    def __init__(self, start, global_map):
-        #local_map = map
-        global_map = []
-        global_map.add(map)
-        startIndex = start
-        endIndex = start
+    def __init__(self, start, end, global_map):
+        self.global_map = []
+        self.global_map.append(global_map)
+        self.startIndex = start
+        self.endIndex = end
 
-    def extend(self):
-        Segment.endIndex += 1
+
 
 
 """
-The Circuit object Holds a list of Segment objects.
-The information encoded in all of the segments allows EmbedAlgorithm
-to reconstruct the reformatted quantum circuit.
-
-segments initializes to having no elements
-GlobalMap initializes to the identity
+General tools needed by EmbedAlgorithm
 """
-class Circuit(object):
+class EmbedHelper(object):
 
-    def __init__(self, numQubits):
-        currentGlobal = Circuit.getIdentityMap(numQubits);
-        segments = []
-        numSegments = 0
+    def __init__(self, QCircuit, coupling):
+        print("init")
+        self.Instruction = Instruction
+        self.Segment = Segment
+        self.Coupling = coupling
+        self.QCircuit = QCircuit
+        self.Instructions = self.reformatInstructions(QCircuit)
+        self.Segments = []
 
 
-    #Applies rule mapping to target
+    def isValid(self, qubit1, qubit2):
+        print("HELPER")
+        #TODO Fill this in.
+        return True
+
+    def reformatInstructions(self, QCircuit):
+        result = []
+        for i in range(0, len(QCircuit.data)):
+            instr = Instruction(QCircuit.data[i])
+            result.append(instr)
+        return result
+
+    # Applies rule mapping to target
     def reMap(self, target, rule):
-        if(len(target) != len(rule)):
+        if (len(target) != len(rule)):
             print("Error in map dimensions")
 
-        for i in range(0,len(target)):
+        for i in range(0, len(target)):
             target[i] = rule[target[i]]
 
         return target
@@ -78,21 +89,23 @@ class Circuit(object):
 
     def getSegment(self, start, end, subsegment=None):
 
-        #Handle differences if extending a subsegment
-        if(subsegment == None):
-            subsegment = Segment(start,{})
-            forwardStart = start
-        else:
-            if(subsegment.endIndex < end):
+        newSegment = Segment(start, end, {})
+        forwardStart = start
+
+        if subsegment != None:
+            if subsegment.endIndex < end:
                 forwardStart = subsegment.endIndex + 1
 
-
         if(forwardStart <= end):
-            self.extendForward(forwardStart, end, subsegment)
+            self.extendForward(forwardStart, end, newSegment)
 
         #Will never be called by Greedy
-        if(start < subsegment.startIndex):
-            self.extendBackward()
+        if subsegment != None:
+            if (start < subsegment.startIndex):
+                self.extendBackward()
+
+
+        return newSegment
 
     def extendForward(self, start, end, subsegment):
 
@@ -162,32 +175,6 @@ class Circuit(object):
     def extendBackward(self):
         print()
 
-"""
-General tools needed by EmbedAlgorithm
-"""
-class EmbedHelper(object):
-
-    def __init__(self, QCircuit, coupling):
-        print("init")
-        self.Instruction = Instruction
-        self.Segment = Segment
-        self.Circuit = Circuit
-        self.coupling = coupling
-        self.QCircuit = QCircuit
-        self.Instructions = self.reformatInstructions(QCircuit)
-        self.segments = []
-
-
-    def isValid(self, qubit1, qubit2):
-        print("HELPER")
-        #TODO Fill this in.
-        return True
-
-    def reformatInstructions(self, QCircuit):
-        result = []
-        for i in range(0, len(QCircuit.data)):
-            result[i] = Instruction(QCircuit.data[i])
-        return result
 
 
 

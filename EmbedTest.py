@@ -2,6 +2,8 @@
 import sys
 import re
 
+from EMBED.Embed import Embed
+
 if sys.version_info < (3, 5):
     raise Exception('Please use Python version 3.5 or greater.')
 
@@ -123,22 +125,42 @@ print("running");
 
     QASMindex += 1;
 '''
-#/////////////////
-# Creating registers
-q = Q_program.create_quantum_register("q", 4)
-c = Q_program.create_classical_register("c", 4)
 
-# Quantum circuit to make the shared entangled state
-superdense = Q_program.create_circuit("superdense", [q], [c])
-
-# For Running this on qx2
-superdense.h(q[3])
-superdense.h(q[0])
-superdense.cx(q[0], q[1])
 
 class hashabledict(dict):
     def __hash__(self):
         return hash(tuple(sorted(self.items())))
+
+testCoupling = {0: (3), 1: (0,3), 2: (1), 3: (4,5), 4: (2,6), 5:(6)}
+q = Q_program.create_quantum_register("qubits", 6)
+c = Q_program.create_classical_register("bits", 6)
+embedtester = Q_program.create_circuit("QCircuit", [q], [c])
+
+embedtester.cx(q[0], q[1])
+embedtester.cx(q[1], q[2])
+embedtester.cx(q[1], q[3])
+embedtester.cx(q[3], q[4])
+embedtester.cx(q[3], q[5])
+
+Embed(embedtester, testCoupling)
+
+#/////////////////
+'''
+q = Q_program.create_quantum_register("q", 4)
+c = Q_program.create_classical_register("c", 4)
+superdense = Q_program.create_circuit("superdense", [q], [c])
+# For Running this on qx2
+superdense.h(q[3])
+superdense.h(q[0])
+superdense.cx(q[0], q[1])
+superdense.z(q[0])
+superdense.cx(q[0], q[1])
+superdense.h(q[0])
+superdense.measure(q[0], c[0])
+superdense.measure(q[1], c[1])
+circuits = ["superdense"]
+var = superdense.regs['q'].size
+print(Q_program.get_qasms(circuits)[0])
 
 dict1 = {}
 dict2 = {}
@@ -150,17 +172,4 @@ dict2[1] = (2, 1)
 
 print(hash(hashabledict(dict1)))
 print(hash(hashabledict(dict2)))
-
-# For Running on qx4
-# superdense.h(q[1])
-# superdense.cx(q[1], q[0])
-
-superdense.z(q[0])
-superdense.cx(q[0], q[1])
-superdense.h(q[0])
-superdense.measure(q[0], c[0])
-superdense.measure(q[1], c[1])
-circuits = ["superdense"]
-var = superdense.regs['q'].size
-print(Q_program.get_qasms(circuits)[0])
-
+'''
