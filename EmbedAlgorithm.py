@@ -1,3 +1,5 @@
+import copy
+
 from EMBED import EmbedHelper
 
 
@@ -18,16 +20,18 @@ def Greedy(helpers):
 
     while(end < cutoff):
 
-        if start != end:
-            raise Exception('start and end indices do not match. An error has occurred between segments in Greedy')
         # greedily grow segement
         segment = helpers.getSegment(start, end)
         end = end + 1
 
-        while (len(segment.global_maps) > 0) & (end < cutoff):
+        while (end < cutoff):
 
+            backup = copy.deepcopy(segment)
             segment = helpers.getSegment(start, end, segment)
-            end = end + 1
+            if(segment.endIndex != end):
+                break
+            else:
+                end = end + 1
 
         start = segment.endIndex + 1
         """

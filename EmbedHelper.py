@@ -147,7 +147,7 @@ class EmbedHelper(object):
                         if (qubit1 not in self.Coupling):
                             continue;
                         for qubit2 in self.Coupling[qubit1]:
-                            if qubit2 in map:
+                            if qubit2 in map.values():
                                 continue
                             if self.isValid(qubit1, qubit2):
                                 newMap = copy.deepcopy(map)
@@ -161,7 +161,7 @@ class EmbedHelper(object):
                     qubit2 = map[target]
 
                     for qubit1 in self.Coupling:
-                        if qubit1 in map:
+                        if qubit1 in map.values():
                             continue
                         if self.isValid(qubit1, qubit2):
                             newMap = copy.deepcopy(map)
@@ -192,7 +192,8 @@ class EmbedHelper(object):
                         newMaps.append(map)
                         subsegment.endIndex = instr;
                     continue
-            subsegment.global_maps = newMaps;
+            if(len(newMaps) != 0):
+                subsegment.global_maps = newMaps;
 
     def extendBackward(self):
         print()
