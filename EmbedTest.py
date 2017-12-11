@@ -131,7 +131,7 @@ class hashabledict(dict):
     def __hash__(self):
         return hash(tuple(sorted(self.items())))
 
-testCoupling = {0: (3), 1: (0,3), 2: (1), 3: (4,5), 4: (2,6), 5:(6)}
+testCoupling = {0: (3,), 1: (0,3), 2: (1,), 3: (4,5), 4: (2,6), 5:(6,)}
 q = Q_program.create_quantum_register("qubits", 6)
 c = Q_program.create_classical_register("bits", 6)
 embedtester = Q_program.create_circuit("QCircuit", [q], [c])

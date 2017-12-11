@@ -36,8 +36,8 @@ GlobalMap initializes to the identity
 """
 class Segment(object):
     def __init__(self, start, end, global_map):
-        self.global_map = []
-        self.global_map.append(global_map)
+        self.global_maps = []
+        self.global_maps.append(global_map)
         self.startIndex = start
         self.endIndex = end
 
@@ -51,7 +51,7 @@ class EmbedHelper(object):
 
     def __init__(self, QCircuit, coupling):
         print("init")
-        self.Instruction = Instruction
+       # self.Instruction = Instruction
         self.Segment = Segment
         self.Coupling = coupling
         self.QCircuit = QCircuit
@@ -89,12 +89,15 @@ class EmbedHelper(object):
 
     def getSegment(self, start, end, subsegment=None):
 
-        newSegment = Segment(start, end, {})
+
         forwardStart = start
 
         if subsegment != None:
+            newSegment = copy.deepcopy(subsegment)
             if subsegment.endIndex < end:
                 forwardStart = subsegment.endIndex + 1
+        else:
+            newSegment = Segment(start, end, {})
 
         if(forwardStart <= end):
             self.extendForward(forwardStart, end, newSegment)
@@ -109,68 +112,87 @@ class EmbedHelper(object):
 
     def extendForward(self, start, end, subsegment):
 
-        for instr in range(start, end):
 
-            if (instr.operation != "CNOT"):
+        for instr in range(start, end+1):
+
+            Instruction = self.Instructions[instr];
+
+            if (Instruction.operation != "cx"):
                 continue
 
+            #These two flags specify whether or not the target or control
+            # qubit are constrained to a particular value for each mapping.
             startFixed = False
             endFixed = False
 
-            control = instr.qubits[0]
-            target = instr.qubits[1]
 
+            control = Instruction.qubits[0]
+            target = Instruction.qubits[1]
+            newMaps = []
 
-            for map in subsegment.globals:
+            for map in subsegment.global_maps:
 
-                subsegment.globals.remove(map)
 
                 # Set Flags
-                if (map.keys().contains(control)):
+                if (control in map.keys()):
                     startFixed = True
-                if (map.keys().contains(target)):
+                if (target in map.keys()):
                     endFixed = True
 
                 #Get Embeddings
-                if startFixed == False & endFixed == False:
-                    for qubit1 in EmbedHelper.coupling:
-                        if map.contains(qubit1):
+                if (startFixed == False) & (endFixed == False):
+                    for qubit1 in self.Coupling:
+                        if qubit1 in map:
                             continue
-                        for qubit2 in EmbedHelper.coupling[qubit1]:
-                            if map.contains(qubit2):
+                        if (qubit1 not in self.Coupling):
+                            continue;
+                        for qubit2 in self.Coupling[qubit1]:
+                            if qubit2 in map:
                                 continue
-                            if EmbedHelper.isValid(qubit1,qubit2):
-                                map[control] = qubit1
-                                map[target] = qubit2
-                                subsegment.globals.add(map)
+                            if self.isValid(qubit1, qubit2):
+                                newMap = copy.deepcopy(map)
+                                newMap[control] = qubit1
+                                newMap[target] = qubit2
+                                newMaps.append(newMap)
+                                subsegment.endIndex = instr;
                     continue
 
-                if startFixed == False & endFixed == True:
-                    qubit1 = map[control]
-                    for qubit2 in EmbedHelper.coupling[qubit1]:
-                        if map.contains(qubit2):
-                            continue
-                        if EmbedHelper.isValid(qubit1, qubit2):
-                            map[target] = qubit2
-                            subsegment.globals.add(map)
-                    continue
-
-                if startFixed == True & endFixed == False:
+                if (startFixed == False) & (endFixed == True):
                     qubit2 = map[target]
-                    for qubit1 in EmbedHelper.coupling:
-                        if map.contains(qubit1):
+
+                    for qubit1 in self.Coupling:
+                        if qubit1 in map:
                             continue
-                        if EmbedHelper.isValid(qubit1, qubit2):
-                            map[control] = qubit1
-                            subsegment.globals.add(map)
+                        if self.isValid(qubit1, qubit2):
+                            newMap = copy.deepcopy(map)
+                            newMap[control] = qubit1
+                            newMaps.append(newMap)
+                            subsegment.endIndex = instr;
                     continue
 
-                if startFixed == True & endFixed == True:
+
+                if (startFixed == True) & (endFixed == False):
+                    qubit1 = map[control]
+                    if(qubit1 not in self.Coupling):
+                        continue;
+                    for qubit2 in self.Coupling[qubit1]:
+                        if qubit2 in map.values():
+                            continue
+                        if self.isValid(qubit1, qubit2):
+                            newMap = copy.deepcopy(map)
+                            newMap[target] = qubit2
+                            newMaps.append(newMap)
+                            subsegment.endIndex = instr;
+                    continue
+
+                if (startFixed == True) & (endFixed == True):
                     qubit1 = map[control]
                     qubit2 = map[target]
-                    if EmbedHelper.isValid(qubit1, qubit2):
-                        subsegment.globals.add(map)
+                    if self.isValid(qubit1, qubit2):
+                        newMaps.append(map)
+                        subsegment.endIndex = instr;
                     continue
+            subsegment.global_maps = newMaps;
 
     def extendBackward(self):
         print()

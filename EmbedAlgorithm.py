@@ -11,17 +11,25 @@ def Greedy(helpers):
     instructions = helpers.Instructions
     segments = helpers.Segments
 
+    cutoff = len(instructions);
 
-    for start in range(0, len(instructions)):
-        end = start
+    end = 0
+    start = 0
+
+    while(end < cutoff):
+
+        if start != end:
+            raise Exception('start and end indices do not match. An error has occurred between segments in Greedy')
         # greedily grow segement
         segment = helpers.getSegment(start, end)
+        end = end + 1
 
-        while len(segment.global_maps) > 0:
-            end = end + 1
+        while (len(segment.global_maps) > 0) & (end < cutoff):
+
             segment = helpers.getSegment(start, end, segment)
+            end = end + 1
 
-        start = segment.end + 1
+        start = segment.endIndex + 1
         """
         # make sure segment only contain one global map
         prv_global_map = segments[-1].global_maps[0]
