@@ -42,8 +42,6 @@ class Segment(object):
         self.endIndex = end
 
 
-
-
 """
 General tools needed by EmbedAlgorithm
 """
@@ -198,6 +196,19 @@ class EmbedHelper(object):
     def extendBackward(self):
         print()
 
+    def cost(self):
+        print()
+
+    def getIntermediateMapping(self, mapA, mapB):
+        if(len(mapA) != len(mapB)):
+            RuntimeError
+        result = {}
+        for i in range(0, len(mapA)):
+            #key
+            if( i in mapA.keys() ):
+
+
+                print()
 
 
 

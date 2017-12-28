@@ -2,7 +2,6 @@ import copy
 
 from EMBED import EmbedHelper
 
-
 def Greedy(helpers):
     QCircuit = helpers.QCircuit
     Coupling = helpers.Coupling
@@ -20,7 +19,7 @@ def Greedy(helpers):
 
     while(end < cutoff):
 
-        # greedily grow segement
+        # greedily grow segment
         segment = helpers.getSegment(start, end)
         end = end + 1
 
@@ -34,27 +33,24 @@ def Greedy(helpers):
                 end = end + 1
 
         start = segment.endIndex + 1
-        """
-        # make sure segment only contain one global map
-        prv_global_map = segments[-1].global_maps[0]
-        # get best global map relative to previous global map
-        #TODO implement cost()
-        best_global_map = segment.global_maps[0]
-        best_cost = helpers.localmap(prv_global_map, segment.global_maps[0])
-        for i in range(1, len(segment.global_maps)):
-            cost = helpers.localmap(prv_global_map, segment.global_maps[i])
-            if cost < best_cost:
-                best_global_map = segment.global_maps[i]
-
-        segment.global_maps = [best_global_map]
-        """
         segments.append(segment)
 
 
+    #Select a map for each segment (greedily)
 
     #Convert intermediate representation back into quantum circuit.
     #Return reconstructed circuit
     print("Algorithm")
     return None
+
+# Dynamically find the optimal permutation of global mappings for each segment
+# such that the total cost of the circuit it minimized.
+def bindSegments(segments):
+    print("Remove angry error messages.")
+    #OPT[i][j] = min( cost(segments[i].globals[j], segments[i-1].globals[k]]) , OPT[i-1][k] )
+    #Here's the idea: Include each additional segment and re-optimize at each new addition.
+    #Optimize over
+
+
 
 
