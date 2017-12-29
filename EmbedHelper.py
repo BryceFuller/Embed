@@ -1,5 +1,7 @@
 import copy
 
+import collections
+
 """
 Instruction holds an intermediate representation of the quantum circuit operations.
 This allows for easier manipulation of instruction data and allows this package to be extended
@@ -196,8 +198,111 @@ class EmbedHelper(object):
     def extendBackward(self):
         print()
 
-    def cost(self):
-        print()
+
+
+    def cost(self, mapA, mapB):
+
+        cost = 0
+
+        # get the keys, sort them as a list and make them into a queue
+        Akeys = collections.deque(sorted(list(mapA.keys())))
+        Bkeys = collections.deque(sorted(list(mapB.keys())))
+
+        Avalues = set(mapA.values())
+        Bvalues = set(mapB.values())
+
+        #TODO: Currently, Accessible only stores the qubits that control onto another qubit,
+        #TODO: but I need it to hold all qubits available in the topology. I will need to write a method for this.
+
+        Accessible = set(self.Coupling.keys())
+        UnusedA = Accessible - Avalues
+        UnusedB = Accessible - Bvalues
+
+        #Aval and Bval will hold elements as they are popped off of Akeys and Bkeys
+        Aval = None
+        Bval = None
+
+        revisit = set()
+
+        while (len(Akeys) > 0) | (len(Bkeys) > 0):
+            # Boolean flags to indicate whether or not the A,B value is defined at a particular key
+            Adef = False
+            Bdef = False
+            Aval = None
+            Bval = None
+
+            #This next block of code sets the Adef and Bdef flags
+            #If both queues are nonempty
+            if (len(Akeys) > 0) & (len(Bkeys) > 0):
+                if Akeys[0] < Bkeys[0]:
+                    Aval = Akeys.popleft()
+                    Adef = True
+                elif Akeys[0] > Bkeys[0]:
+                    Bval = Bkeys.popleft()
+                    Bdef = True
+                elif Akeys[0] == Bkeys[0]:
+                    Aval = Akeys.popleft()
+                    Bval = Bkeys.popleft()
+                    Adef = True
+                    Bdef = True
+            #If only Bkeys is empty
+            elif (len(Akeys) > 0):
+                Aval = Akeys.popleft()
+                Adef = True
+            # If only Akeys is empty
+            elif (len(Bkeys) > 0):
+                Bval = Bkeys.popleft()
+                Bdef = True
+
+
+            #This block of code calculates cost for a particular mapping in the
+            # manner specified by the Adef and Bdef flags
+            if (Adef & Bdef):
+ #               UnusedA.remove(mapA[Aval])
+ #               UnusedB.remove(mapB[Bval])
+                cost += self.costOfPath(mapA[Aval], mapB[Bval])
+                #Calculate shortest path, simple arithmetic required to find cost.
+                print()
+            elif (Adef & (Bdef == False)):
+ #               UnusedA.remove(mapA[Aval])
+                if(mapA[Aval] in Bvalues):
+                    #Handle later
+                    revisit.add((Aval, None))
+                else:
+                    UnusedB.remove(mapA[Aval])
+                #else no cost incurred, mapping for mapA of this key value pair need not change.
+            elif ((Adef == False) & Bdef):
+#                UnusedB.remove(mapB[Bval])
+                if (mapB[Bval] in Avalues):
+                    # Handle later
+                    revisit.add((None, Bval))
+                else:
+                    UnusedA.remove(mapB[Bval])
+                #else no cost incurred, mapping for mapB of this key value pair can be propagated backward.
+
+        while(len(revisit) > 0):
+            ABval = revisit.pop()
+            if(ABval[0] == None):
+                #TODO: Get element from UnusedA, possibly using BFS to optimize
+                cost += self.costOfPath(None, None)
+                # Calculate shortest path, simple arithmetic required to find cost.
+                print()
+            elif(ABval[1] == None):
+                # TODO: Get element from UnusedA, possibly using BFS to optimize
+                cost += self.costOfPath(None, None)
+                # Calculate shortest path, simple arithmetic required to find cost.
+                print()
+
+    def costOfPath(self, qubitA, qubitB):
+        #get Shortest path
+        path = self.shortestPath()
+        #TODO: Traverse the path and determine cost
+            #This is largely determined by whether or not there are
+            # any undirected edges
+
+    #Take as input a start qubit and a tuple of potential ending qubits.
+    def shortestPath(self):
+        print("Implement Dijkstra")
 
     def getIntermediateMapping(self, mapA, mapB):
         if(len(mapA) != len(mapB)):
@@ -209,7 +314,6 @@ class EmbedHelper(object):
 
 
                 print()
-
 
 
 

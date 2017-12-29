@@ -2,6 +2,7 @@ import copy
 
 from EMBED import EmbedHelper
 
+
 def Greedy(helpers):
     QCircuit = helpers.QCircuit
     Coupling = helpers.Coupling
@@ -38,9 +39,19 @@ def Greedy(helpers):
 
     #Select a map for each segment (greedily)
 
+    # ////////////////////////////////////////////////////////////////////
+    # Cost Test
+
+    mapA = {2: 3, 4: 1, 5: 2}
+    mapB = {1: 2, 3: 4, 4: 1}
+    helpers.cost(mapA, mapB)
+
+    # ////////////////////////////////////////////////////////////////////
+
     #Convert intermediate representation back into quantum circuit.
     #Return reconstructed circuit
     print("Algorithm")
+    helpers.cost(segments[0].global_maps[0], segments[1].global_maps[0])
     return None
 
 # Dynamically find the optimal permutation of global mappings for each segment
