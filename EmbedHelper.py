@@ -49,14 +49,32 @@ General tools needed by EmbedAlgorithm
 """
 class EmbedHelper(object):
 
+    CXcost = 2
+    Hcost = 1
+
     def __init__(self, QCircuit, coupling):
         print("init")
        # self.Instruction = Instruction
         self.Segment = Segment
         self.Coupling = coupling
+        self.UndirectedCoupling = self.directedToUndirected(coupling)
         self.QCircuit = QCircuit
         self.Instructions = self.reformatInstructions(QCircuit)
         self.Segments = []
+
+    #Go through the directed graph coupling, and return the
+    # same graph with undirected edges
+    def directedToUndirected(self, coupling):
+        UndirectedCoupling = {}
+        for key in coupling.keys():
+            UndirectedCoupling[key] = list(coupling[key])
+        for key in coupling.keys():
+            for value in coupling[key]:
+                UndirectedCoupling[value].append(key)
+        for key in UndirectedCoupling.keys():
+            UndirectedCoupling[key] = tuple(UndirectedCoupling[key])
+
+        return UndirectedCoupling
 
 
     def isValid(self, qubit1, qubit2):
@@ -199,10 +217,14 @@ class EmbedHelper(object):
         print()
 
 
-
+    #inputs are two mappings and an optional third copy of mapB to retrieve the final state
+    #Calculates cost of transforming from mapA to mapB
+    #TODO Test finalMapB functionality
+    #TODO Test cost function
     def cost(self, mapA, mapB):
 
         cost = 0
+        finalMapB = copy.deepcopy(mapB)
 
         # get the keys, sort them as a list and make them into a queue
         Akeys = collections.deque(sorted(list(mapA.keys())))
@@ -211,10 +233,7 @@ class EmbedHelper(object):
         Avalues = set(mapA.values())
         Bvalues = set(mapB.values())
 
-        #TODO: Currently, Accessible only stores the qubits that control onto another qubit,
-        #TODO: but I need it to hold all qubits available in the topology. I will need to write a method for this.
-
-        Accessible = set(self.Coupling.keys())
+        Accessible = set(self.UndirectedCoupling.keys())
         UnusedA = Accessible - Avalues
         UnusedB = Accessible - Bvalues
 
@@ -260,7 +279,9 @@ class EmbedHelper(object):
             if (Adef & Bdef):
  #               UnusedA.remove(mapA[Aval])
  #               UnusedB.remove(mapB[Bval])
-                cost += self.costOfPath(mapA[Aval], mapB[Bval])
+                if(mapA[Aval] != mapB[Bval]):
+                    path = self.shortestPath(mapA[Aval], mapB[Bval])
+                    cost += self.costOfPath(path)
                 #Calculate shortest path, simple arithmetic required to find cost.
                 print()
             elif (Adef & (Bdef == False)):
@@ -270,6 +291,8 @@ class EmbedHelper(object):
                     revisit.add((Aval, None))
                 else:
                     UnusedB.remove(mapA[Aval])
+                    if finalMapB != None:
+                        finalMapB[Aval] = mapA[Aval]
                 #else no cost incurred, mapping for mapA of this key value pair need not change.
             elif ((Adef == False) & Bdef):
 #                UnusedB.remove(mapB[Bval])
@@ -280,40 +303,130 @@ class EmbedHelper(object):
                     UnusedA.remove(mapB[Bval])
                 #else no cost incurred, mapping for mapB of this key value pair can be propagated backward.
 
+        #Handle cases where algorithm has a choice of where to swap qubit values
+        #By handling non-ambiguous cases first we can know which qubits will be available to swap with
         while(len(revisit) > 0):
             ABval = revisit.pop()
+
             if(ABval[0] == None):
-                #TODO: Get element from UnusedA, possibly using BFS to optimize
-                cost += self.costOfPath(None, None)
-                # Calculate shortest path, simple arithmetic required to find cost.
+                #Find a suitable qubit to transform from
+                path = self.shortestPath(mapB[ABval[1]], UnusedA)
+                cost += self.costOfPath(path)
                 print()
             elif(ABval[1] == None):
-                # TODO: Get element from UnusedA, possibly using BFS to optimize
-                cost += self.costOfPath(None, None)
-                # Calculate shortest path, simple arithmetic required to find cost.
+                #Find a suitable qubit to transform to
+                path = self.shortestPath(mapA[ABval[0]], UnusedB)
+                finalMapB[ABval[0]] = path[0]
+                cost += self.costOfPath(path)
                 print()
 
-    def costOfPath(self, qubitA, qubitB):
-        #get Shortest path
-        path = self.shortestPath()
-        #TODO: Traverse the path and determine cost
-            #This is largely determined by whether or not there are
-            # any undirected edges
+        return (cost, finalMapB)
 
-    #Take as input a start qubit and a tuple of potential ending qubits.
-    def shortestPath(self):
-        print("Implement Dijkstra")
-
-    def getIntermediateMapping(self, mapA, mapB):
-        if(len(mapA) != len(mapB)):
-            RuntimeError
-        result = {}
-        for i in range(0, len(mapA)):
-            #key
-            if( i in mapA.keys() ):
+    #Takes as input a list of adjacent nodes
+    def costOfPath(self, path):
+        cost = 0;
+        node = path.pop()
 
 
-                print()
+        while path:
+            nextNode = path.pop()
+
+            if (len(path) == 0):
+                if (nextNode in self.Coupling[node]) & (node in self.Coupling[nextNode]):
+                    cost += (self.CXcost * 3)
+                else:
+                    cost += (self.CXcost * 3 + self.Hcost * 4)
+                return cost
+
+            if (nextNode not in self.Coupling[node]) & (node not in self.Coupling[nextNode]):
+                raise Exception("Invalid Path")
+            if (nextNode in self.Coupling[node]) & (node in self.Coupling[nextNode]):
+                cost += (self.CXcost * 3) * 2
+            else:
+                cost += (self.CXcost * 3 + self.Hcost * 4) * 2
+
+
+            node = nextNode
+
+
+
+
+    #Take as input a start qubit and
+    # either a single or tuple of potential ending qubits.
+    # returns a list specifying the path from end to start
+    def shortestPath(self, start, ends):
+        visited = set()
+        traceback = {start: None}
+        discovered = [start]
+        while discovered:
+            vertex = discovered.pop(0)
+            if vertex not in visited:
+
+                #If a single endpoint is given
+                if isinstance(ends, int):
+                    #single end point
+                    if vertex == ends:
+                        path = list()
+                        path.append(ends)
+                        parent = traceback[ends]
+                        while parent != None:
+                            path.append(parent)
+                            parent = traceback[parent]
+                        return path
+
+                #If a list of possible endpoints is given
+                if isinstance(ends, set):
+                    # single end point
+                    if vertex in ends:
+                        path = list()
+                        path.append(vertex)
+                        parent = traceback[vertex]
+                        while parent != None:
+                            path.append(parent)
+                            parent = traceback[parent]
+                        return path
+
+
+                visited.add(vertex)
+                for child in set(self.UndirectedCoupling[vertex]):
+                    if (child not in visited) & (child not in discovered):
+                        discovered.append(child)
+                        traceback[child] = vertex
+
+        return None
+
+    def selectSegments(self, segments):
+
+
+        traceback = []
+        costs = []
+        qubitMappings = []
+
+        #Corner case, first mapping
+
+        for segment in range(0, segments):
+
+            qubitMappings[segment] = []
+            costs[segment] = []
+            traceback[segment] = []
+
+            for mapping in segment.global_maps:
+
+                if segment == 0:
+                    costs[segment][mapping] = 0;
+                    qubitMappings[mapping] = copy.deepcopy(segments[segment].global_maps[mapping])
+
+                else:
+                    qubitMappings[mapping] = copy.deepcopy(segments[segment].global_maps[mapping])
+                    for previousMap in segments[segment-1].global_maps:
+                        minCost = self.cost(previousMap, mapping, ) #TODO think about having cost return the cost and mapping
+                        print()
+
+
+
+
+
+
 
 
 
