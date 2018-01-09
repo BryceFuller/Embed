@@ -52,8 +52,15 @@ def Greedy(helpers):
     mapA = {0: 2, 2: 3, 3: 4}
     mapB = {0: 0, 1: 5, 2: 4}
 
+    mapC = {0: 2, 2: 3, 3: 0}
+    mapD = {0: 4, 1: 2, 3: 3}
+
     cost1 = helpers.cost(mapA, mapB)
+
+    cost2 = helpers.cost(mapC, mapD)
+    #cost2 = helpers.cost(cost[1], mapC)
     print(cost1)
+    print(cost2)
 
     return None
 
