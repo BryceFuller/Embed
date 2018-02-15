@@ -150,7 +150,6 @@ class EmbedHelper(object):
 
             for map in subsegment.global_maps:
 
-
                 # Set Flags
                 if (control in map.keys()):
                     startFixed = True
@@ -217,27 +216,35 @@ class EmbedHelper(object):
         print()
 
 
-    #inputs are two mappings and an optional third copy of mapB to retrieve the final state
+    #inputs are found mappings mapA, mapB
+    # as well as the inverted equivalent of mapA mapB
+    #Output is a tuple containing the minimmized MapA' MapB' and cost
     #Calculates cost of transforming from mapA to mapB
     #TODO Test finalMapB functionality
     #TODO Test cost function
-    def cost(self, mapA, mapB):
+    def cost(self, startmapA, startmapB, startinvA, startinvB):
 
         cost = 0
-        finalMapB = copy.deepcopy(mapB)
+
+        MapB = copy.deepcopy(startmapB)
+        MapA = copy.deepcopy(startmapA)
+        InvA = copy.deepcopy(startinvA)
+        InvB = copy.deepcopy(startinvB)
 
         # get the keys, sort them as a list and make them into a queue
-        Akeys = collections.deque(sorted(list(mapA.keys())))
-        Bkeys = collections.deque(sorted(list(mapB.keys())))
+        Akeys = collections.deque(sorted(list(MapA.keys())))
+        Bkeys = collections.deque(sorted(list(MapB.keys())))
 
-        Avalues = set(mapA.values())
-        Bvalues = set(mapB.values())
+        #Create a set for these values to achieve O(1) time for checking membership
+        Avalues = set(MapA.values())
+        Bvalues = set(MapB.values())
 
         Accessible = set(self.UndirectedCoupling.keys())
         UnusedA = Accessible - Avalues
         UnusedB = Accessible - Bvalues
 
         #Aval and Bval will hold elements as they are popped off of Akeys and Bkeys
+        #Aval and Bval correspond to the indices of states being embedded. Not the indices of the physical qubits.
         Aval = None
         Bval = None
 
@@ -274,34 +281,57 @@ class EmbedHelper(object):
                 Bdef = True
 
 
-            #This block of code calculates cost for a particular mapping in the
+
+
+
+            #This handles each line of the intermediate mappings in the
             # manner specified by the Adef and Bdef flags
             if (Adef & Bdef):
  #               UnusedA.remove(mapA[Aval])
  #               UnusedB.remove(mapB[Bval])
-                if(mapA[Aval] != mapB[Bval]):
-                    path = self.shortestPath(mapA[Aval], mapB[Bval])
-                    cost += self.costOfPath(path)
-                #Calculate shortest path, simple arithmetic required to find cost.
-                print()
+                 revisit.add((Aval,Bval))
+                 #Make note that this key has been handled.
+
+            # (#, U, None)
             elif (Adef & (Bdef == False)):
- #               UnusedA.remove(mapA[Aval])
-                if(mapA[Aval] in Bvalues):
-                    #Handle later
-                    revisit.add((Aval, None))
-                else:
-                    UnusedB.remove(mapA[Aval])
-                    if finalMapB != None:
-                        finalMapB[Aval] = mapA[Aval]
-                #else no cost incurred, mapping for mapA of this key value pair need not change.
+                initAval = Aval
+                initAkey = InvA[Aval]
+
+                U = Aval
+                Ukey = initAkey
+                #Get key of Aval = *u
+
+                while (True):
+                    # Is Aval in mapB.values?
+                    if U in Bvalues:
+                        Ukey = InvB[U]
+                        #If MapA is defined for key = Ukey
+                        if Ukey in MapA.keys():
+                            U = MapA[Ukey]
+                            continue
+                        else:
+                            MapB[initAkey] = -Ukey
+                            InvB[-Ukey] = initAkey
+                            #Add a placeholder here! Negative entries refer to the logical indices which a qubit would map from
+                            # Ex Map[num] = -key means that logical qubit 1's location is undefined, but that it must have
+                            # been swapped with location of logical qubit num in the previous map
+                            print()
+                    else:
+                        MapB[initAkey] = U
+                        InvB[U] = initAkey
+                        break
+
+
+            # (#, None, V)
             elif ((Adef == False) & Bdef):
-#                UnusedB.remove(mapB[Bval])
-                if (mapB[Bval] in Avalues):
-                    # Handle later
-                    revisit.add((None, Bval))
-                else:
-                    UnusedA.remove(mapB[Bval])
-                #else no cost incurred, mapping for mapB of this key value pair can be propagated backward.
+
+                initBval = Bval
+                initBkey = InvB[Bval]
+
+                V = Bval
+                Vkey =
+
+
 
         #Handle cases where algorithm has a choice of where to swap qubit values
         #By handling non-ambiguous cases first we can know which qubits will be available to swap with
