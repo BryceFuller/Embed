@@ -216,6 +216,8 @@ class EmbedHelper(object):
         print()
 
 
+
+
     #inputs are found mappings mapA, mapB
     # as well as the inverted equivalent of mapA mapB
     #Output is a tuple containing the minimmized MapA' MapB' and cost
@@ -231,113 +233,167 @@ class EmbedHelper(object):
         InvA = copy.deepcopy(startinvA)
         InvB = copy.deepcopy(startinvB)
 
-        # get the keys, sort them as a list and make them into a queue
-        Akeys = collections.deque(sorted(list(MapA.keys())))
-        Bkeys = collections.deque(sorted(list(MapB.keys())))
+        swapPaths = set()
 
+        # get the keys, sort them as a list and make them into a queue
+        #Akeys = set(MapA.keys())
+        #Bkeys = set(MapB.keys())
+
+        Keys = MapA.keys() | MapB.keys()
+
+        print(type(Keys))
         #Create a set for these values to achieve O(1) time for checking membership
-        Avalues = set(MapA.values())
-        Bvalues = set(MapB.values())
+        #Avalues = set(MapA.values())
+        #Bvalues = set(MapB.values())
 
         Accessible = set(self.UndirectedCoupling.keys())
-        UnusedA = Accessible - Avalues
-        UnusedB = Accessible - Bvalues
+        UnusedA = Accessible - InvA.keys()
+        UnusedB = Accessible - InvB.keys()
 
         #Aval and Bval will hold elements as they are popped off of Akeys and Bkeys
         #Aval and Bval correspond to the indices of states being embedded. Not the indices of the physical qubits.
-        Aval = None
-        Bval = None
+        #Aval = None
+        #Bval = None
 
         revisit = set()
 
-        while (len(Akeys) > 0) | (len(Bkeys) > 0):
-            # Boolean flags to indicate whether or not the A,B value is defined at a particular key
-            Adef = False
-            Bdef = False
+        while (len(Keys) > 0):
+            NextKey = Keys.pop()
             Aval = None
             Bval = None
 
-            #This next block of code sets the Adef and Bdef flags
-            #If both queues are nonempty
-            if (len(Akeys) > 0) & (len(Bkeys) > 0):
-                if Akeys[0] < Bkeys[0]:
-                    Aval = Akeys.popleft()
-                    Adef = True
-                elif Akeys[0] > Bkeys[0]:
-                    Bval = Bkeys.popleft()
-                    Bdef = True
-                elif Akeys[0] == Bkeys[0]:
-                    Aval = Akeys.popleft()
-                    Bval = Bkeys.popleft()
-                    Adef = True
-                    Bdef = True
-            #If only Bkeys is empty
-            elif (len(Akeys) > 0):
-                Aval = Akeys.popleft()
-                Adef = True
-            # If only Akeys is empty
-            elif (len(Bkeys) > 0):
-                Bval = Bkeys.popleft()
-                Bdef = True
-
-
-
-
-
             #This handles each line of the intermediate mappings in the
             # manner specified by the Adef and Bdef flags
-            if (Adef & Bdef):
- #               UnusedA.remove(mapA[Aval])
- #               UnusedB.remove(mapB[Bval])
-                 revisit.add((Aval,Bval))
-                 #Make note that this key has been handled.
+            #if ((NextKey in MapA) & (NextKey in MapB)):
+                #Aval = MapA[NextKey]
+                #Bval = MapB[NextKey]
+               #revisit.add((Aval,Bval))
+                #Make note that this key has been handled.
 
             # (#, U, None)
-            elif (Adef & (Bdef == False)):
-                initAval = Aval
-                initAkey = InvA[Aval]
+            if ((NextKey in MapA) & (NextKey not in MapB)):
 
+                Aval = MapA[NextKey]
                 U = Aval
-                Ukey = initAkey
+                Ukey = NextKey
                 #Get key of Aval = *u
 
                 while (True):
                     # Is Aval in mapB.values?
-                    if U in Bvalues:
+                    if U in InvB:
                         Ukey = InvB[U]
                         #If MapA is defined for key = Ukey
-                        if Ukey in MapA.keys():
+                        if Ukey in MapA:
                             U = MapA[Ukey]
                             continue
                         else:
-                            MapB[initAkey] = -Ukey
-                            InvB[-Ukey] = initAkey
-                            #Add a placeholder here! Negative entries refer to the logical indices which a qubit would map from
-                            # Ex Map[num] = -key means that logical qubit 1's location is undefined, but that it must have
-                            # been swapped with location of logical qubit num in the previous map
-                            print()
+                            #revisit.add((Aval, None))
+                            revisit.add((NextKey, Ukey))
+                            Keys.remove(Ukey)
+
+                            #MapB[NextKey] = -1-Ukey  #Add a placeholder here! Negative entries refer to the logical indices which a qubit would map from
+                            #InvB[-1-Ukey] = NextKey  # Ex Map[num] = -1-key means that logical qubit key's location is undefined, but that it must have
+                            #MapA[Ukey] = -1-Ukey               # been swapped with location of logical qubit num in the previous map
+                            #InvA[-1-Ukey] = Ukey
+                            break
                     else:
-                        MapB[initAkey] = U
-                        InvB[U] = initAkey
+                        MapB[NextKey] = U
+                        InvB[U] = NextKey
+                        UnusedB.remove(U)
+                        break
+
+            # (#, None, V)
+            elif ((NextKey not in MapA) & (NextKey in MapB)):
+
+                Bval = MapB[NextKey]
+                V = Bval
+                Vkey = NextKey
+                # Get key of Aval = *u
+
+                while (True):
+                    # Is Bval in mapA.values?
+                    if V in InvA:
+                        Vkey = InvA[V]
+                        # If MapB is defined for key = Vkey
+                        if Vkey in MapB:
+                            V = MapB[Vkey]
+                           # if(V < 0)
+                            continue
+                        else:
+                            revisit.add((Vkey, NextKey))
+                            Keys.remove(Vkey)
+
+                            #revisit.add((None, V))
+                            #MapA[NextKey] = (-1 - Vkey)  # Add a placeholder here! Negative entries refer to the logical indices which a qubit would map from
+                            #InvA[-1-Vkey] = NextKey  # Ex Map[num] = -1-key means that logical qubit key's location is undefined, but that it must have
+                            #MapB[Vkey] = (-1 - Vkey)                   # been swapped with location of logical qubit num in the previous map
+                            #InvB[-1-Vkey] = Vkey
+                            break
+                    else:
+                        MapA[NextKey] = V
+                        InvA[V] = NextKey
+                        UnusedA.remove(V)
                         break
 
 
-            # (#, None, V)
-            elif ((Adef == False) & Bdef):
+                """#NOTE a choice was made here.
+        # I could have decided that for pairs (None, #),(#, None) that # must be the same for both resulting in a single
+        # swap (or swap path). Instead, this way allows values to be swapped to locations that may be occupied in the
+        # other mapping. In the future I may be able to compute the minimum between these two.
+        while (len(revisit) > 0):
+            pair = revisit.pop()
 
-                initBval = Bval
-                initBkey = InvB[Bval]
+            if( pair[0] == None ):
+                # Find a suitable qubit to transform from
+                path = self.shortestPath(pair[1], UnusedA)
 
-                V = Bval
-                Vkey =
+                MapA[InvB[pair[0]]] = path[0]
+                InvA[path[0]] = InvB[pair[0]]
+                UnusedA.remove(path[0])
+
+            elif( pair[1] == None ):
+                # Find a suitable qubit to transform from
+                path = self.shortestPath(pair[0], UnusedB)
+                MapB[InvA[pair[1]]] = path[0]
+                InvB[path[0]] = InvA[pair[1]]
+                UnusedB.remove(path[0])
+
+            elif(pair == (None, None)):
+                #Something is seriously wrong if this happens
+                assert Exception
 
 
-
-        #Handle cases where algorithm has a choice of where to swap qubit values
+                """#Handle cases where algorithm has a choice of where to swap qubit values
         #By handling non-ambiguous cases first we can know which qubits will be available to swap with
         while(len(revisit) > 0):
-            ABval = revisit.pop()
+            keys = revisit.pop()
 
+            Aval = MapA[keys[0]]
+            Bval = MapB[keys[1]]
+
+            #wont use this until I have shortest path modified to work for two target qubits
+            #path1 = self.shortestPath(Aval, UnusedB)
+            #path2 = self.shortestPath(Bval, UnusedA)
+
+            if(Aval == Bval):
+                path = self.shortestPath(Aval, (UnusedA & UnusedB))
+                MapB[keys[0]] = path[0]
+                InvB[path[0]] = keys[0]
+                MapA[keys[1]] = path[0]
+                InvA[path[0]] = keys[1]
+
+            else:
+                path1 = self.shortestPath(Aval, UnusedB)
+
+                MapB[keys[0]] = path1[0]
+                InvB[path1[0]] = keys[0]
+
+                path2 = self.shortestPath(Bval, UnusedA)
+
+                MapA[keys[1]] = path2[0]
+                InvA[path2[0]] = keys[1]
+
+            """
             if(ABval[0] == None):
                 #Find a suitable qubit to transform from
                 path = self.shortestPath(mapB[ABval[1]], UnusedA)
@@ -347,10 +403,16 @@ class EmbedHelper(object):
                 #Find a suitable qubit to transform to
                 path = self.shortestPath(mapA[ABval[0]], UnusedB)
                 finalMapB[ABval[0]] = path[0]
-                cost += self.costOfPath(path)
-                print()
+                cost += self.costOfPath(path)"""
+        print()
 
-        return (cost, finalMapB)
+        return (cost, MapA, MapB)
+
+    def invertMap(self, map):
+        invMap = {}
+        for key in map.keys():
+            invMap[map[key]] = key
+        return invMap
 
     #Takes as input a list of adjacent nodes
     def costOfPath(self, path):
