@@ -18,7 +18,7 @@ import Qconfig
 # Quantum program setup
 Q_program = QuantumProgram()
 # set the APIToken and API url
-Q_program.set_api(Qconfig.APItoken, Qconfig.config["url"])
+#Q_program.set_api(Qconfig.APItoken, Qconfig.config["url"])
 
 #////////////////////////////////////////////////////////////////////
 #Test 1
@@ -79,7 +79,7 @@ mapA = {0: 2, 2: 3, 3: 4}
 mapB = {0: 0, 1: 5, 2: 4}
 
 
-result = Embed(embedtest3, testCoupling3)
+result = Embed(embedtest1, testCoupling3)
 
 print(result)
 

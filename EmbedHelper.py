@@ -70,15 +70,23 @@ class EmbedHelper(object):
             UndirectedCoupling[key] = list(coupling[key])
         for key in coupling.keys():
             for value in coupling[key]:
-                UndirectedCoupling[value].append(key)
-        for key in UndirectedCoupling.keys():
-            UndirectedCoupling[key] = tuple(UndirectedCoupling[key])
+                if value in UndirectedCoupling:
+                    UndirectedCoupling[value].append(key)
+                else:
+                    UndirectedCoupling[value] = (key)
+        #for key in UndirectedCoupling.keys():
+        #    UndirectedCoupling[key] = tuple(UndirectedCoupling[key])
 
         return UndirectedCoupling
 
 
     def isValid(self, qubit1, qubit2):
+
         print("HELPER")
+
+        if qubit1 in self.Coupling and qubit2 in self.Coupling[qubit1]:
+            return True
+
         #TODO Fill this in.
         return True
 
@@ -224,36 +232,31 @@ class EmbedHelper(object):
     #Calculates cost of transforming from mapA to mapB
     #TODO Test finalMapB functionality
     #TODO Test cost function
-    def cost(self, startmapA, startmapB, startinvA, startinvB):
+    def cost(self, startmapA, startmapB):
 
         cost = 0
-
+        #Maps logial qubit to physical qubit
         MapB = copy.deepcopy(startmapB)
         MapA = copy.deepcopy(startmapA)
-        InvA = copy.deepcopy(startinvA)
-        InvB = copy.deepcopy(startinvB)
+        #Note, it is possible to pass in and store all of the inverted maps
+        #Inv maps Physical Qubit to Logical Qubit
+        InvA = self.invertMap(MapA)
+        InvB = self.invertMap(MapB)
 
-        swapPaths = set()
 
         # get the keys, sort them as a list and make them into a queue
         #Akeys = set(MapA.keys())
         #Bkeys = set(MapB.keys())
-
         Keys = MapA.keys() | MapB.keys()
 
-        print(type(Keys))
         #Create a set for these values to achieve O(1) time for checking membership
         #Avalues = set(MapA.values())
         #Bvalues = set(MapB.values())
 
-        Accessible = set(self.UndirectedCoupling.keys())
+        Accessible = self.UndirectedCoupling.keys()
         UnusedA = Accessible - InvA.keys()
         UnusedB = Accessible - InvB.keys()
 
-        #Aval and Bval will hold elements as they are popped off of Akeys and Bkeys
-        #Aval and Bval correspond to the indices of states being embedded. Not the indices of the physical qubits.
-        #Aval = None
-        #Bval = None
 
         revisit = set()
 
@@ -336,44 +339,19 @@ class EmbedHelper(object):
                         break
 
 
-                """#NOTE a choice was made here.
-        # I could have decided that for pairs (None, #),(#, None) that # must be the same for both resulting in a single
-        # swap (or swap path). Instead, this way allows values to be swapped to locations that may be occupied in the
-        # other mapping. In the future I may be able to compute the minimum between these two.
-        while (len(revisit) > 0):
-            pair = revisit.pop()
-
-            if( pair[0] == None ):
-                # Find a suitable qubit to transform from
-                path = self.shortestPath(pair[1], UnusedA)
-
-                MapA[InvB[pair[0]]] = path[0]
-                InvA[path[0]] = InvB[pair[0]]
-                UnusedA.remove(path[0])
-
-            elif( pair[1] == None ):
-                # Find a suitable qubit to transform from
-                path = self.shortestPath(pair[0], UnusedB)
-                MapB[InvA[pair[1]]] = path[0]
-                InvB[path[0]] = InvA[pair[1]]
-                UnusedB.remove(path[0])
-
-            elif(pair == (None, None)):
-                #Something is seriously wrong if this happens
-                assert Exception
-
-
-                """#Handle cases where algorithm has a choice of where to swap qubit values
+        #NOTE a choice was made here.
+        # I decided that for pairs (None, #),(#, None) that # must be the same for both resulting in a single
+        # swap (or swap path). If however, an incomplete cycle is broken by (None, #),(#', None) where #,#' are not
+        # equivalent. Then the algorithm finds the closest available qubit to each value.
+        #=======================================================================
+        #Handle cases where algorithm has a choice of where to swap qubit values
         #By handling non-ambiguous cases first we can know which qubits will be available to swap with
+        print()
         while(len(revisit) > 0):
             keys = revisit.pop()
 
             Aval = MapA[keys[0]]
             Bval = MapB[keys[1]]
-
-            #wont use this until I have shortest path modified to work for two target qubits
-            #path1 = self.shortestPath(Aval, UnusedB)
-            #path2 = self.shortestPath(Bval, UnusedA)
 
             if(Aval == Bval):
                 path = self.shortestPath(Aval, (UnusedA & UnusedB))
@@ -381,32 +359,103 @@ class EmbedHelper(object):
                 InvB[path[0]] = keys[0]
                 MapA[keys[1]] = path[0]
                 InvA[path[0]] = keys[1]
+                UnusedA.remove(path[0])
+                UnusedB.remove(path[0])
 
+            #Note, this is where the bug is, need to fix this part.
             else:
                 path1 = self.shortestPath(Aval, UnusedB)
-
                 MapB[keys[0]] = path1[0]
                 InvB[path1[0]] = keys[0]
+                UnusedB.remove(path1[0])
 
                 path2 = self.shortestPath(Bval, UnusedA)
-
                 MapA[keys[1]] = path2[0]
                 InvA[path2[0]] = keys[1]
+                UnusedA.remove(path2[0])
 
-            """
-            if(ABval[0] == None):
-                #Find a suitable qubit to transform from
-                path = self.shortestPath(mapB[ABval[1]], UnusedA)
-                cost += self.costOfPath(path)
-                print()
-            elif(ABval[1] == None):
-                #Find a suitable qubit to transform to
-                path = self.shortestPath(mapA[ABval[0]], UnusedB)
-                finalMapB[ABval[0]] = path[0]
-                cost += self.costOfPath(path)"""
-        print()
 
-        return (cost, MapA, MapB)
+        #If somehow both maps are not filled out then something is horribly awry.
+        # Program should implode so it does not output nonsense.
+        if(len(MapA.keys()) != (MapB.keys())):
+            assert Exception
+
+        #Now we will generate the list of swap paths, and convert this into the list of swap gates.
+        #From here we can return a cost based upon the solution we have found
+        valid = 0
+        swapPaths = []
+        InvKeys = InvA.keys() | InvB.keys()
+
+        #Get a copy of InvA we can modify without destroying original
+        TinvA = copy.deepcopy(InvA)
+
+        while(valid < len(InvKeys)):
+            for key in InvKeys:
+
+                if(key in TinvA and key in InvB):
+                    if(TinvA[key] != InvB[key]):
+                        toSwap = MapB[TinvA[key]]
+                        #Swap key and toSwap
+                        swapPaths.append((key,toSwap))
+                        if(toSwap in TinvA):
+                            temp = TinvA[key]
+                            TinvA[key] = TinvA[toSwap]
+                            TinvA[toSwap] = temp
+                        else:
+                            TinvA[toSwap] = TinvA[key]
+                            TinvA.pop(key)
+                        break
+                elif (key in TinvA and key not in InvB):
+                    toSwap = MapB[TinvA[key]]
+                    swapPaths.append((key, toSwap))
+                    if (toSwap in TinvA):
+                        temp = TinvA[key]
+                        TinvA[key] = TinvA[toSwap]
+                        TinvA[toSwap] = temp
+                    else:
+                        TinvA[toSwap] = TinvA[key]
+                        TinvA.pop(key)
+                    break
+                elif (key not in TinvA and key in InvB):
+                    toSwap = MapA[InvB[key]]
+                    swapPaths.append((key, toSwap))
+                    TinvA[key] = TinvA[toSwap]
+                    TinvA.pop(toSwap)
+                    break
+            else:
+                    break
+            continue
+
+        swaps = list()
+        #Expand swapPaths into an actual sequence of swap gates.
+        for sp in swapPaths:
+            path = self.shortestPath(sp[0],sp[1])
+            if(len(path) == 2):
+                swaps.append(path)
+            else:
+                for i in range(len(path)-2):
+                    swaps.append((path[i],path[i+1]))
+                for i in range(len(path)-1):
+                    swaps.append((path[-i-2],path[-i-1]))
+
+
+        for swap in swaps:
+            forward  = False
+            backward = False
+            if swap[0] in self.Coupling and swap[1] in self.Coupling[swap[0]]:
+                forward = True
+            if swap[1] in self.Coupling and swap[0] in self.Coupling[swap[1]]:
+                backward = True
+
+            if(forward and backward):
+                cost += 3 * self.CXcost
+            elif( forward or backward):
+                cost += 3 * self.CXcost
+                cost += 4 * self.Hcost
+            else:
+                assert Exception
+
+        return (cost, swaps, MapA, MapB)
 
     def invertMap(self, map):
         invMap = {}
@@ -487,38 +536,70 @@ class EmbedHelper(object):
 
         return None
 
-    def selectSegments(self, segments):
+    def memoize(self, nodemap, k, sources, node):
+        print(k)
+        if type(sources) == dict:
+            #node.append(self.cost(sources, nodemap))
+            return self.cost(sources, nodemap)
+            print()
+        if k == 0:
+            costs = []
+            min = 0
+
+            if type(sources) == list:
+                #DO actual memoization with costs
+                for source in range(len(sources)):
+                    costs.append(self.cost(sources[source], nodemap))
+                    if min[0] < costs[source][0]:
+                        min = costs[source]
+                return min
+            else:
+                assert Exception
+
+        else:
 
 
-        traceback = []
-        costs = []
-        qubitMappings = []
+            for targetnode in range(len(sources)):
+                node.append([])
+                node[targetnode].append(self.memoize(nodemap, k-1, sources[targetnode], node[targetnode]))
+                #return self.memoize(nodemap, k - 1, sources[targetnode], node[targetnode])
+        print()
 
-        #Corner case, first mapping
+        print()
 
-        for segment in range(0, segments):
+    def selectSegments(self, segments, k=None):
+
+        if k==None: dim = 1
+        #traceback = []
+        #costs = []
+        qubitMappings = {}
+
+        #Corner case, only one mapping
+        if len(segments) == 1:
+            return segments[0].global_maps[0]
+        #Fill out the memoization table
+        for segment in range(0, len(segments)):
+            #qubitMappings[segment] = {}
+            #costs[segment] = []
+            #traceback[segment] = []
+            if segment == 0:
+                qubitMappings[segment] = []
+                for node in range(len(segments[segment].global_maps)):
+                    qubitMappings[segment].append(segments[segment].global_maps[node])
+                continue
 
             qubitMappings[segment] = []
-            costs[segment] = []
-            traceback[segment] = []
+            for node in range(len(segments[segment].global_maps)):
+                #qubitMappings[segment][node] = {}
+                qubitMappings[segment].append([])
+                nodemap = segments[segment].global_maps[node]
 
-            for mapping in segment.global_maps:
-
-                if segment == 0:
-                    costs[segment][mapping] = 0;
-                    qubitMappings[mapping] = copy.deepcopy(segments[segment].global_maps[mapping])
-
-                else:
-                    qubitMappings[mapping] = copy.deepcopy(segments[segment].global_maps[mapping])
-                    for previousMap in segments[segment-1].global_maps:
-                        minCost = self.cost(previousMap, mapping, ) #TODO think about having cost return the cost and mapping
-                        print()
-
-
-
-
-
-
+                print()
+                qubitMappings[segment][node].append(self.memoize( nodemap, k, qubitMappings[segment-1], qubitMappings[segment][node]))
+                #qubitMappings[segment][node] = self.memoize( nodemap, k, qubitMappings[segment-1], qubitMappings[segment][node])
+                print()
+        #trace over the table and recover the best found mapping sequence.
+        print()
 
 
 

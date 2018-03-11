@@ -38,8 +38,8 @@ def Greedy(helpers):
 
 
     #Select a map for each segment (greedily)
-
-    # ////////////////////////////////////////////////////////////////////
+    print(segments)
+    segopt = helpers.selectSegments(segments, 1)# ////////////////////////////////////////////////////////////////////
     # Cost Test
 
     #mapA = {2: 3, 4: 1, 5: 2}
@@ -54,15 +54,18 @@ def Greedy(helpers):
     mapB = {0: 0, 1: 5, 2: 4}
     InvB = {0: 0, 4: 2, 5: 1}
     """
-    mapA = {0: 6, 2: 3, 3: 2}
-    mapB = {1: 6, 3: 3, 4: 2}
+    mapA = {0: 6, 1: 4, 2: 3, 3: 2}
+    mapB = {0: 4, 1: 6, 3: 3, 4: 2}
     InvA = helpers.invertMap(mapA)
     InvB = helpers.invertMap(mapB)
 
     mapC = {0: 2, 2: 3, 3: 0}
     mapD = {0: 4, 1: 2, 3: 3}
 
-    cost1 = helpers.cost(mapA, mapB, InvA, InvB)
+
+
+
+    cost1, swaps, mapAprime, mapBprime = helpers.cost(mapA, mapB)
 
     cost2 = helpers.cost(mapC, mapD)
     #cost2 = helpers.cost(cost[1], mapC)
