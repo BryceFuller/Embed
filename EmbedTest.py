@@ -79,7 +79,7 @@ mapA = {0: 2, 2: 3, 3: 4}
 mapB = {0: 0, 1: 5, 2: 4}
 
 
-result = Embed(embedtest1, testCoupling3)
+result = Embed(embedtest3, testCoupling3)
 
 print(result)
 

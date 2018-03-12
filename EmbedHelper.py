@@ -73,7 +73,7 @@ class EmbedHelper(object):
                 if value in UndirectedCoupling:
                     UndirectedCoupling[value].append(key)
                 else:
-                    UndirectedCoupling[value] = (key)
+                    UndirectedCoupling[value] = (key,)
         #for key in UndirectedCoupling.keys():
         #    UndirectedCoupling[key] = tuple(UndirectedCoupling[key])
 
@@ -232,7 +232,7 @@ class EmbedHelper(object):
     #Calculates cost of transforming from mapA to mapB
     #TODO Test finalMapB functionality
     #TODO Test cost function
-    def cost(self, startmapA, startmapB):
+    def cost(self, prevcost, traceback,  startmapA, startmapB):
 
         cost = 0
         #Maps logial qubit to physical qubit
@@ -455,7 +455,7 @@ class EmbedHelper(object):
             else:
                 assert Exception
 
-        return (cost, swaps, MapA, MapB)
+        return (cost + prevcost, traceback, swaps, MapA, MapB)
 
     def invertMap(self, map):
         invMap = {}
@@ -536,36 +536,38 @@ class EmbedHelper(object):
 
         return None
 
-    def memoize(self, nodemap, k, sources, node):
-        print(k)
-        if type(sources) == dict:
-            #node.append(self.cost(sources, nodemap))
-            return self.cost(sources, nodemap)
-            print()
-        if k == 0:
-            costs = []
-            min = 0
+    def memoize(self, nodemap, k, sources):
+        #"""     print(k)
+     if type(sources) == dict:
+         #node.append(self.cost(sources, nodemap))
+         return self.cost(0, -1, sources, nodemap)
+         print()
+     if k == 0:
+         costs = []
+         min = None
 
-            if type(sources) == list:
-                #DO actual memoization with costs
-                for source in range(len(sources)):
-                    costs.append(self.cost(sources[source], nodemap))
-                    if min[0] < costs[source][0]:
-                        min = costs[source]
-                return min
-            else:
-                assert Exception
+        #TODO Needs to be fixed to reflect accumulated costs
+         if type(sources) == list:
+             #DO actual memoization with costs
+             for source in range(len(sources)):
+                 costs = (self.cost(sources[source][0], source, sources[source][4], nodemap))
+                 #costs[0] = costs[0] + sources[source][0]
+                 if min == None:
+                     min = costs
+                 if min[0] > costs[0]:
+                     min = costs
+             return min
+         else:
+             assert Exception
 
-        else:
-
-
-            for targetnode in range(len(sources)):
-                node.append([])
-                node[targetnode].append(self.memoize(nodemap, k-1, sources[targetnode], node[targetnode]))
-                #return self.memoize(nodemap, k - 1, sources[targetnode], node[targetnode])
-        print()
-
-        print()
+     else:
+         nodeArray = []
+         for targetnode in range(len(sources)):
+             nodeArray.append(self.memoize(nodemap, k-1, sources[targetnode]))
+         return nodeArray
+     print()
+#"""
+     print()
 
     def selectSegments(self, segments, k=None):
 
@@ -579,28 +581,26 @@ class EmbedHelper(object):
             return segments[0].global_maps[0]
         #Fill out the memoization table
         for segment in range(0, len(segments)):
-            #qubitMappings[segment] = {}
+            qubitMappings[segment] = []
             #costs[segment] = []
             #traceback[segment] = []
             if segment == 0:
-                qubitMappings[segment] = []
+                #qubitMappings[segment] = []
                 for node in range(len(segments[segment].global_maps)):
                     qubitMappings[segment].append(segments[segment].global_maps[node])
                 continue
 
-            qubitMappings[segment] = []
+            #qubitMappings[segment] = []
             for node in range(len(segments[segment].global_maps)):
-                #qubitMappings[segment][node] = {}
-                qubitMappings[segment].append([])
-                nodemap = segments[segment].global_maps[node]
 
+                nodemap = segments[segment].global_maps[node]
+                qubitMappings[segment].append([])
+                qubitMappings[segment][node] = self.memoize(nodemap, k, qubitMappings[segment - 1])
                 print()
-                qubitMappings[segment][node].append(self.memoize( nodemap, k, qubitMappings[segment-1], qubitMappings[segment][node]))
-                #qubitMappings[segment][node] = self.memoize( nodemap, k, qubitMappings[segment-1], qubitMappings[segment][node])
-                print()
+            print()
         #trace over the table and recover the best found mapping sequence.
         print()
-
+        return qubitMappings
 
 
 
