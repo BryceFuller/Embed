@@ -78,8 +78,28 @@ embedtest3.cx(q3[7], q3[10])
 mapA = {0: 2, 2: 3, 3: 4}
 mapB = {0: 0, 1: 5, 2: 4}
 
+#////////////////////////////////////////////////////////////////////
 
-result = Embed(embedtest3, testCoupling3)
+testCoupling4 = {0: (1,2,3,4,5,6,7), 1:(8,), 2:(9,), 3:(10,), 4:(11,), 5:(12,), 6:(13,), 7:(14,)}
+q4 = Q_program.create_quantum_register("q4", 15)
+c4 = Q_program.create_classical_register("c4", 15)
+embedtest4 = Q_program.create_circuit("QCircuit4", [q4], [c4])
+
+embedtest4.cx(q4[0],q4[1])
+embedtest4.cx(q4[0],q4[2])
+embedtest4.cx(q4[0],q4[3])
+embedtest4.cx(q4[0],q4[4])
+embedtest4.cx(q4[4],q4[5])
+embedtest4.cx(q4[5],q4[6])
+embedtest4.cx(q4[5],q4[7])
+embedtest4.cx(q4[5],q4[8])
+embedtest4.cx(q4[5],q4[9])
+embedtest4.cx(q4[9],q4[10])
+embedtest4.cx(q4[10],q4[11])
+embedtest4.cx(q4[10],q4[12])
+embedtest4.cx(q4[10],q4[13])
+
+result = Embed(embedtest4, testCoupling4)
 
 print(result)
 

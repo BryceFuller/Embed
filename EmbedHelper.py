@@ -82,13 +82,13 @@ class EmbedHelper(object):
 
     def isValid(self, qubit1, qubit2):
 
-        print("HELPER")
+
 
         if qubit1 in self.Coupling and qubit2 in self.Coupling[qubit1]:
             return True
 
         #TODO Fill this in.
-        return True
+        return False
 
     def reformatInstructions(self, QCircuit):
         result = []
@@ -346,7 +346,6 @@ class EmbedHelper(object):
         #=======================================================================
         #Handle cases where algorithm has a choice of where to swap qubit values
         #By handling non-ambiguous cases first we can know which qubits will be available to swap with
-        print()
         while(len(revisit) > 0):
             keys = revisit.pop()
 
@@ -431,7 +430,7 @@ class EmbedHelper(object):
         for sp in swapPaths:
             path = self.shortestPath(sp[0],sp[1])
             if(len(path) == 2):
-                swaps.append(path)
+                swaps.append(tuple(path))
             else:
                 for i in range(len(path)-2):
                     swaps.append((path[i],path[i+1]))
@@ -541,22 +540,35 @@ class EmbedHelper(object):
      if type(sources) == dict:
          #node.append(self.cost(sources, nodemap))
          return self.cost(0, -1, sources, nodemap)
-         print()
+         #Note, the -1 traceback serves as an indicator that this tuple needs no additional information
+         # to describe it's predecessor. This was not the max tuple for an array of possible source
+
      if k == 0:
          costs = []
          min = None
 
         #TODO Needs to be fixed to reflect accumulated costs
-         if type(sources) == list:
-             #DO actual memoization with costs
-             for source in range(len(sources)):
-                 costs = (self.cost(sources[source][0], source, sources[source][4], nodemap))
-                 #costs[0] = costs[0] + sources[source][0]
-                 if min == None:
-                     min = costs
-                 if min[0] > costs[0]:
-                     min = costs
-             return min
+         if (type(sources) == list):
+             if (type(sources[0]) == tuple):
+                 #DO actual memoization with costs
+                 for source in range(len(sources)):
+                     #costs = (self.cost(sources[source][0], source, sources[source][4], nodemap))
+                     costs = (self.cost(sources[source][0], source, sources[source][3], nodemap))
+                     #costs[0] = costs[0] + sources[source][0]
+                     if min == None:
+                         min = costs
+                     if min[0] > costs[0]:
+                         min = costs
+                 return min
+             if( type(sources[0]) == dict):
+                 for source in range(len(sources)):
+                     costs = (0, -1, sources[source], nodemap)
+                     #costs[0] = costs[0] + sources[source][0]
+                     if min == None:
+                         min = costs
+                     if min[0] > costs[0]:
+                         min = costs
+                 return min
          else:
              assert Exception
 
@@ -565,23 +577,77 @@ class EmbedHelper(object):
          for targetnode in range(len(sources)):
              nodeArray.append(self.memoize(nodemap, k-1, sources[targetnode]))
          return nodeArray
-     print()
+     #print()
 #"""
-     print()
+     #print()
+
+    def getMin(self, node):
+        if type(node) == tuple:
+            return node, ()
+        if type(node) == list:
+            minI = 0
+            min = None
+            for i in range(len(node)):
+                mapping, prevI = self.getMin(node[i])
+                if min == None:
+                    min = mapping
+                    minI = (i,) + prevI
+                    continue
+                elif min[0] > mapping[0]:
+                    min = mapping
+                    minI = (i,) + prevI
+            return min , minI
+
+    def grabElement(self, searchSpace, location):
+        #print()
+        if len(location) == 1:
+            if type(searchSpace[location]) != tuple:
+                assert Exception #something is wrong with traceback. Misaligned data structures.
+            return searchSpace[location]
+        elif (len(location) == 2) & (location[-1] == -1):
+            return searchSpace[location[0]]
+        else:
+            element = self.grabElement(searchSpace[location[0]], location[1:])
+            return element
+        #This will be recursively defined to go look for elements in arbitrarily depth high nested lists.
+        #if
+
+    def traceback(self, qubitMappings):
+        optSegs = [] #Room to optimize by making this a deque
+        end = self.getMin(qubitMappings[-1])
+        prevSeg = end
+        #index = end[1]
+        optSegs.append(end[0])
+        for segment in range(len(qubitMappings)-1,0,-1):
+            index = prevSeg[1]
+            prevSeg = self.grabElement(qubitMappings, index + (prevSeg[0][1],))
+            if type(prevSeg) == dict:
+                optSegs.append(prevSeg)
+            elif type(prevSeg) == tuple:
+                optSegs.append(prevSeg[0])
+            else:
+                assert Exception
+                #There should never be a value that isnt either an tuple or dict
+
+        return optSegs
+
 
     def selectSegments(self, segments, k=None):
 
-        if k==None: dim = 1
+        print("Selecting Segment Mappings")
+        #if k==None
         #traceback = []
         #costs = []
-        qubitMappings = {}
+        k=0
+        qubitMappings = []
 
         #Corner case, only one mapping
         if len(segments) == 1:
             return segments[0].global_maps[0]
         #Fill out the memoization table
         for segment in range(0, len(segments)):
-            qubitMappings[segment] = []
+            print("Generating layer ", segment, " in memoization table")
+            qubitMappings.append([])
             #costs[segment] = []
             #traceback[segment] = []
             if segment == 0:
@@ -596,10 +662,29 @@ class EmbedHelper(object):
                 nodemap = segments[segment].global_maps[node]
                 qubitMappings[segment].append([])
                 qubitMappings[segment][node] = self.memoize(nodemap, k, qubitMappings[segment - 1])
-                print()
-            print()
+
+
         #trace over the table and recover the best found mapping sequence.
-        print()
+
+        min = self.getMin(qubitMappings[-1])
+        optSegments = self.traceback(qubitMappings)
+
+        # backpropogate the optimal mapping information into previous segments.
+        backpropSegments = []
+        backpropSegments.append((optSegments[0][4],))
+        for segment in range(len(optSegments)-1):
+            backpropSegments.append((optSegments[segment][3],optSegments[segment][2]))
+
+        for mapping in range(1,len(backpropSegments)):
+            current = backpropSegments[mapping][0]
+            post = backpropSegments[mapping-1][0]
+            for key in post:
+                if key not in current:
+                    current[key] = post[key]
+
+
+
+
         return qubitMappings
 
 

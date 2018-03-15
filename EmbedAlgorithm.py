@@ -35,6 +35,7 @@ def Greedy(helpers):
 
         start = segment.endIndex + 1
         segments.append(segment)
+        print("Segment ",len(segments),"found with: ",len(segments[-1].global_maps) )
 
 
     #Select a map for each segment (greedily)
