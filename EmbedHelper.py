@@ -562,7 +562,7 @@ class EmbedHelper(object):
                  return min
              if( type(sources[0]) == dict):
                  for source in range(len(sources)):
-                     costs = (0, -1, sources[source], nodemap)
+                     costs = self.cost(0, -1, sources[source], nodemap)
                      #costs[0] = costs[0] + sources[source][0]
                      if min == None:
                          min = costs
@@ -607,6 +607,7 @@ class EmbedHelper(object):
         elif (len(location) == 2) & (location[-1] == -1):
             return searchSpace[location[0]]
         else:
+            #TODO This is very broken indeed!
             element = self.grabElement(searchSpace[location[0]], location[1:])
             return element
         #This will be recursively defined to go look for elements in arbitrarily depth high nested lists.
