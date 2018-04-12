@@ -1,4 +1,5 @@
 import copy
+from qiskit import QuantumCircuit, QuantumProgram
 
 from EMBED import EmbedHelper
 
@@ -39,8 +40,47 @@ def Greedy(helpers):
 
 
     #Select a map for each segment (greedily)
-    print(segments)
-    segopt = helpers.selectSegments(segments, 1)# ////////////////////////////////////////////////////////////////////
+    optSegments = helpers.localSelect(segments)
+
+
+    Q_program = QuantumProgram()
+    q = Q_program.create_quantum_register("qubits", len(optSegments[0][0].keys()))
+    c = Q_program.create_classical_register("bits", len(optSegments[0][0].keys()))
+    NewCircuit = Q_program.create_circuit("NewCircuit", [q], [c])
+
+
+
+    for segment in range(len(segments)):
+        for i in range(segments[segment].startIndex,segments[segment].endIndex+1):
+            command = QCircuit.data[i].name
+            single = len(QCircuit.data[i].arg) == 1
+            double = len(QCircuit.data[i].arg) == 2
+
+            if( not single and not double):
+                assert Exception #Undefined use case: 3-qubit gates
+
+
+            if(single):
+                arg0 = QCircuit.data[i].arg[0][1]
+                if (arg0 not in optSegments[segment][0].keys()):
+                    assert Exception
+                arg0 = optSegments[segment][0][arg0]
+                instr = "NewCircuit." + command + "(q[" + str(arg0) + "])"
+                exec(instr)
+
+            if(double):
+                arg0 = QCircuit.data[i].arg[0][1]
+                arg1 = QCircuit.data[i].arg[1][1]
+                if(arg0 not in optSegments[segment][0].keys()) or (arg1 not in optSegments[segment][0].keys()):
+                    assert Exception    #Something terrible happened.
+                arg0 = optSegments[segment][0][arg0]
+                arg1 = optSegments[segment][0][arg1] #TODO test this part, I never got to it
+                instr = "NewCircuit." + command + "(q[" + str(arg0) + "], q[" + str(arg1) + "])"
+                exec(instr)
+        print #NOW do all the swap gates.
+        for swap in optSegments[segment][1]:
+            instr = "NewCircuit.swap("q[" + str(arg0) + "], q[" + str(arg1) + "])"
+    #  ////////////////////////////////////////////////////////////////////
     # Cost Test
 
     #mapA = {2: 3, 4: 1, 5: 2}

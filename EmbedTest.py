@@ -112,6 +112,7 @@ embedtest5 = Q_program.create_circuit("QCircuit5", [q5], [c5])
 
 embedtest5.cx(q5[0],q5[1])
 embedtest5.cx(q5[0],q5[2])
+embedtest5.h(q5[0])
 embedtest5.cx(q5[0],q5[3])
 embedtest5.cx(q5[0],q5[5])
 embedtest5.cx(q5[5],q5[6])

@@ -553,7 +553,7 @@ class EmbedHelper(object):
                  #DO actual memoization with costs
                  for source in range(len(sources)):
                      #costs = (self.cost(sources[source][0], source, sources[source][4], nodemap))
-                     costs = (self.cost(sources[source][0], source, sources[source][3], nodemap))
+                     costs = (self.cost(sources[source][0], source, sources[source][4], nodemap))
                      #costs[0] = costs[0] + sources[source][0]
                      if min == None:
                          min = costs
@@ -562,7 +562,7 @@ class EmbedHelper(object):
                  return min
              if( type(sources[0]) == dict):
                  for source in range(len(sources)):
-                     costs = self.cost(0, -1, sources[source], nodemap)
+                     costs = self.cost(0, source, sources[source], nodemap)
                      #costs[0] = costs[0] + sources[source][0]
                      if min == None:
                          min = costs
@@ -613,7 +613,17 @@ class EmbedHelper(object):
         #This will be recursively defined to go look for elements in arbitrarily depth high nested lists.
         #if
 
-    def traceback(self, qubitMappings):
+    #Traceback written for k=0 only
+    def traceback1(self, qubitMappings):
+        optSegs = [] #Room to optimize by making this a deque
+        end = self.getMin(qubitMappings[-1])
+        prevSeg = end
+        optSegs.append(end[0])
+        for segment in range(len(qubitMappings) - 1, 0, -1):
+            index = prevSeg[0][1]
+            node = qubitMappings[segment][index]
+
+    def traceback2(self, qubitMappings):
         optSegs = [] #Room to optimize by making this a deque
         end = self.getMin(qubitMappings[-1])
         prevSeg = end
@@ -632,6 +642,75 @@ class EmbedHelper(object):
 
         return optSegs
 
+
+    def localSelect(self, segments):
+
+        qubitMappings = []
+
+        # Corner case, only one segment
+        if len(segments) == 1:
+            return segments[0].global_maps[0]
+
+        # Fill out the memoization table
+        for segment in range(0, len(segments)):
+            print("Generating layer ", segment, " in memoization table")
+            qubitMappings.append([])
+
+            if segment == 0:
+                for node in range(len(segments[segment].global_maps)):
+                    qubitMappings[segment].append(segments[segment].global_maps[node])
+                continue
+
+            for node in range(len(segments[segment].global_maps)):
+
+                endmap = segments[segment].global_maps[node]
+                qubitMappings[segment].append([])
+                #min = self.cost(0,0,segments[segment-1].global_maps[0],segments[segment].global_maps[node])
+                #for prevnode in range(len(segments[segment-1].global_maps)):
+                #    getcost = self.cost(0, 0, segments[segment - 1].global_maps[0], segments[segment].global_maps[node])
+                #    if getcost[0] < min[0]:
+                #        min = getcost
+                #qubitMappings[segment].append(min)
+
+                qubitMappings[segment][node] = self.memoize(endmap,0, qubitMappings[segment - 1])
+
+
+
+        #Find end node that minimizes cost
+        minCost, minIndex = 0, 0
+        minCost = qubitMappings[-1][0][0]
+        for map in range(len(qubitMappings[-1])):
+            if qubitMappings[-1][map][0] < minCost:
+                minCost = qubitMappings[-1][map][0]
+                minIndex = map
+
+        optSegments = []
+        optSegments.append( (qubitMappings[-1][minIndex][4],(None)) )
+        optSegments.append((qubitMappings[-1][minIndex][3],qubitMappings[-1][minIndex][2]))
+        childIndex = qubitMappings[-1][minIndex][1]
+
+        # Traceback through the table
+        for segment in range(len(segments)-2, 0, -1):
+            child = qubitMappings[segment][childIndex]
+            optSegments.append((child[3], child[2]))
+            if type(child) != dict:
+                childIndex = child[1]
+
+        #Backpropogate qubit assignments
+
+        for mapping in range(1,len(optSegments)):
+            mapB = optSegments[mapping-1][0]
+            mapA = optSegments[mapping][0]
+
+            for key in mapB.keys():
+                if key in mapA.keys():
+                    if mapA[key] != mapB[key]:
+                        assert Exception
+                else:
+                    mapA[key] = mapB[key]
+
+        optSegments.reverse()
+        return optSegments
 
     def selectSegments(self, segments, k=None):
 
@@ -666,7 +745,10 @@ class EmbedHelper(object):
 
 
         #trace over the table and recover the best found mapping sequence.
+        #New function written just for the k=0 case:
+      #  min
 
+        #Previous work
         min = self.getMin(qubitMappings[-1])
         optSegments = self.traceback(qubitMappings)
 
