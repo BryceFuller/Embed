@@ -38,14 +38,14 @@ def Greedy(helpers):
         segments.append(segment)
         print("Segment ",len(segments),"found with: ",len(segments[-1].global_maps) )
 
-
+    return segments
     #Select a map for each segment (greedily)
-    optSegments = helpers.localSelect(segments)
-
+    """
+    return optSegments
 
     Q_program = QuantumProgram()
-    q = Q_program.create_quantum_register("qubits", len(optSegments[0][0].keys()))
-    c = Q_program.create_classical_register("bits", len(optSegments[0][0].keys()))
+    q = Q_program.create_quantum_register("qubits", len(helpers.UndirectedCoupling.keys()))
+    c = Q_program.create_classical_register("bits", len(helpers.UndirectedCoupling.keys()))
     NewCircuit = Q_program.create_circuit("NewCircuit", [q], [c])
 
 
@@ -76,10 +76,15 @@ def Greedy(helpers):
                 arg0 = optSegments[segment][0][arg0]
                 arg1 = optSegments[segment][0][arg1] #TODO test this part, I never got to it
                 instr = "NewCircuit." + command + "(q[" + str(arg0) + "], q[" + str(arg1) + "])"
+                print(instr)
                 exec(instr)
         print #NOW do all the swap gates.
         for swap in optSegments[segment][1]:
-            instr = "NewCircuit.swap("q[" + str(arg0) + "], q[" + str(arg1) + "])"
+            print("swap(" + str(swap[0])+", "+str(swap[1])+")")
+            helpers.swap(NewCircuit, q, swap[0], swap[1])
+
+    return NewCircuit
+    """
     #  ////////////////////////////////////////////////////////////////////
     # Cost Test
 

@@ -12,5 +12,8 @@ if sys.version_info < (3, 5):
 def Embed(QCircuit, coupling):
     helpers = EmbedHelper.EmbedHelper(QCircuit, coupling)
     segments = EmbedAlgorithm.Greedy(helpers)
-    #TODO get local maps for segments, parse into swap gates
+    optSegments = helpers.localSelect(segments)
+    NewCircuit = helpers.RebuildCircuit(optSegments,segments)
+    return NewCircuit
+
 

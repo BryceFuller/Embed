@@ -1,5 +1,5 @@
 import copy
-
+from qiskit import QuantumCircuit, QuantumProgram
 import collections
 
 """
@@ -685,7 +685,7 @@ class EmbedHelper(object):
                 minIndex = map
 
         optSegments = []
-        optSegments.append( (qubitMappings[-1][minIndex][4],(None)) )
+        optSegments.append( (qubitMappings[-1][minIndex][4],list()) )
         optSegments.append((qubitMappings[-1][minIndex][3],qubitMappings[-1][minIndex][2]))
         childIndex = qubitMappings[-1][minIndex][1]
 
@@ -754,7 +754,7 @@ class EmbedHelper(object):
 
         # backpropogate the optimal mapping information into previous segments.
         backpropSegments = []
-        backpropSegments.append((optSegments[0][4],))
+        backpropSegments.append((optSegments[0][4],list()))
         for segment in range(len(optSegments)-1):
             backpropSegments.append((optSegments[segment][3],optSegments[segment][2]))
 
@@ -771,6 +771,78 @@ class EmbedHelper(object):
         return qubitMappings
 
 
+    def swap(self, Circuit,q, arg0, arg1):
+        forward = False
+        backward = False
+        if arg0 in self.Coupling.keys():
+            if arg1 in self.Coupling[arg0]:
+                forward = True
+        if arg1 in self.Coupling.keys():
+            if arg0 in self.Coupling[arg1]:
+                backward = True
+
+        if forward and not backward:
+            Circuit.cx(q[arg0], q[arg1])
+            Circuit.h(q[arg0])
+            Circuit.h(q[arg1])
+            Circuit.cx(q[arg0], q[arg1])
+            Circuit.h(q[arg1])
+            Circuit.h(q[arg0])
+            Circuit.cx(q[arg0], q[arg1])
+        if backward and not forward:
+            Circuit.cx(q[arg1], q[arg0])
+            Circuit.h(q[arg0])
+            Circuit.h(q[arg1])
+            Circuit.cx(q[arg1], q[arg0])
+            Circuit.h(q[arg1])
+            Circuit.h(q[arg0])
+            Circuit.cx(q[arg1], q[arg0])
+        if backward and forward:
+            Circuit.cx(q[arg0], q[arg1])
+            Circuit.cx(q[arg1], q[arg0])
+            Circuit.cx(q[arg0], q[arg1])
+        if not backward and not forward:
+            assert Exception
 
 
+    def RebuildCircuit(self,optSegments, segments):
+        QCircuit = self.QCircuit
+        Q_program = QuantumProgram()
+        q = Q_program.create_quantum_register("qubits", len(self.UndirectedCoupling.keys()))
+        c = Q_program.create_classical_register("bits", len(self.UndirectedCoupling.keys()))
+        NewCircuit = Q_program.create_circuit("NewCircuit", [q], [c])
+
+        for segment in range(len(segments)):
+            for i in range(segments[segment].startIndex, segments[segment].endIndex + 1):
+                command = QCircuit.data[i].name
+                single = len(QCircuit.data[i].arg) == 1
+                double = len(QCircuit.data[i].arg) == 2
+
+                if (not single and not double):
+                    assert Exception  # Undefined use case: 3-qubit gates
+
+                if (single):
+                    arg0 = QCircuit.data[i].arg[0][1]
+                    if (arg0 not in optSegments[segment][0].keys()):
+                        assert Exception
+                    arg0 = optSegments[segment][0][arg0]
+                    instr = "NewCircuit." + command + "(q[" + str(arg0) + "])"
+                    exec(instr)
+
+                if (double):
+                    arg0 = QCircuit.data[i].arg[0][1]
+                    arg1 = QCircuit.data[i].arg[1][1]
+                    if (arg0 not in optSegments[segment][0].keys()) or (arg1 not in optSegments[segment][0].keys()):
+                        assert Exception  # Something terrible happened.
+                    arg0 = optSegments[segment][0][arg0]
+                    arg1 = optSegments[segment][0][arg1]  # TODO test this part, I never got to it
+                    instr = "NewCircuit." + command + "(q[" + str(arg0) + "], q[" + str(arg1) + "])"
+                    print(instr)
+                    exec(instr)
+            print  # NOW do all the swap gates.
+            for swap in optSegments[segment][1]:
+                print("swap(" + str(swap[0]) + ", " + str(swap[1]) + ")")
+                self.swap(NewCircuit, q, swap[0], swap[1])
+
+        return NewCircuit
 
