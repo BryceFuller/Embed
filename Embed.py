@@ -12,7 +12,12 @@ if sys.version_info < (3, 5):
 def Embed(QCircuit, coupling):
     helpers = EmbedHelper.EmbedHelper(QCircuit, coupling)
     segments = EmbedAlgorithm.Greedy(helpers)
-    optSegments = helpers.localSelect(segments)
+
+    # K = 0
+    #optSegments = helpers.localSelect(segments)
+
+    #K > 0
+    optSegments = helpers.selectSegments(segments, 2)
     NewCircuit = helpers.RebuildCircuit(optSegments,segments)
     return NewCircuit
 

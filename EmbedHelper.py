@@ -718,7 +718,7 @@ class EmbedHelper(object):
         #if k==None
         #traceback = []
         #costs = []
-        k=0
+
         qubitMappings = []
 
         #Corner case, only one mapping
@@ -750,7 +750,7 @@ class EmbedHelper(object):
 
         #Previous work
         min = self.getMin(qubitMappings[-1])
-        optSegments = self.traceback(qubitMappings)
+        optSegments = self.traceback2(qubitMappings)
 
         # backpropogate the optimal mapping information into previous segments.
         backpropSegments = []
@@ -764,9 +764,6 @@ class EmbedHelper(object):
             for key in post:
                 if key not in current:
                     current[key] = post[key]
-
-
-
 
         return qubitMappings
 
