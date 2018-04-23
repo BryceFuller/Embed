@@ -634,33 +634,37 @@ class EmbedHelper(object):
 
     def traceback2(self, qubitMappings):
         optSegs = []  # Room to optimize by making this a deque
-        prevSeg, end = self.getMin(qubitMappings[-1])
+        prevSeg, nextIndex = self.getMin(qubitMappings[-1])
+        cost = prevSeg[0]
         #prevSeg = end
         # index = end[1]
-        optSegs.append(prevSeg)
-        for segment in range(len(qubitMappings) - 2, -1, -1):
+        optSegs.append((prevSeg[4],[]))
+        optSegs.append((prevSeg[3], prevSeg[2]))
+        for segment in range(len(qubitMappings) - 2, 0, -1):
 
-            nextIndex = tuple(list(end)[1:])
-            if type(prevSeg) == list:
-                if prevSeg[1] == -1:
-                    # End contains all relevant information.
-
-                    prevSeg = self.grabElement(qubitMappings[segment], nextIndex)
-                    optSegs.append(prevSeg)
-
-                else:
-                    # index = prevSeg[1]
-                    prevSeg = self.grabElement(qubitMappings[segment], nextIndex + (prevSeg[1],))
-                    optSegs.append(prevSeg)
-
-            if type(prevSeg) == dict:
-                optSegs.append(prevSeg)
+            nextIndex = tuple(list(nextIndex)[1:])
+            #if type(prevSeg) == list:
+            if prevSeg[1] == -1:
+                # nextIndex contains all relevant information.
+                prevSeg = self.grabElement(qubitMappings[segment], nextIndex)
+                optSegs.append((prevSeg[3], prevSeg[2]))
                 continue
-            if type(prevSeg) == tuple:
-                optSegs.append(prevSeg)
+
+            else:
+                # index = nextIndex + prevSeg[1]
+                prevSeg = self.grabElement(qubitMappings[segment], nextIndex + (prevSeg[1],))
+                optSegs.append((prevSeg[3], prevSeg[2]))
                 continue
+
+            #if type(prevSeg) == dict:
+            #    prevSeg = self.g
+            #    optSegs.append(prevSeg)
+            #    continue
+            #if type(prevSeg) == tuple:
+            #    optSegs.append(prevSeg)
+            #    continue
             assert Exception("Unexpected Type")
-        return optSegs
+        return optSegs, cost
 
 
     def localSelect(self, segments):
@@ -692,7 +696,7 @@ class EmbedHelper(object):
                 #        min = getcost
                 #qubitMappings[segment].append(min)
 
-                qubitMappings[segment][node] = self.memoize(endmap,0, qubitMappings[segment - 1])
+                qubitMappings[segment][node] = self.memoize(endmap, qubitMappings[segment - 1],0)
 
 
 
@@ -730,7 +734,7 @@ class EmbedHelper(object):
                     mapA[key] = mapB[key]
 
         optSegments.reverse()
-        return optSegments
+        return optSegments, minCost
 
     def selectSegments(self, segments, k=None):
 
@@ -768,22 +772,33 @@ class EmbedHelper(object):
 
         # Previous work
         # Min = self.getMin(qubitMappings[-1])
-        optSegments = self.traceback2(qubitMappings)
+        optSegments, cost = self.traceback2(qubitMappings)
+
+        for mapping in range(1,len(optSegments)):
+            mapB = optSegments[mapping-1][0]
+            mapA = optSegments[mapping][0]
+
+            for key in mapB.keys():
+                if key in mapA.keys():
+                    if mapA[key] != mapB[key]:
+                        assert Exception
+                else:
+                    mapA[key] = mapB[key]
 
         # backpropogate the optimal mapping information into previous segments.
-        backpropSegments = []
-        backpropSegments.append((optSegments[0][4], list()))
-        for segment in range(len(optSegments) - 1):
-            backpropSegments.append((optSegments[segment][3], optSegments[segment][2]))
+        #backpropSegments = []
+        #backpropSegments.append((optSegments[0][4], list()))
+        #for segment in range(len(optSegments) - 1):
+        #    backpropSegments.append((optSegments[segment][3], optSegments[segment][2]))
+#
+#        for mapping in range(1, len(backpropSegments)):
+#            current = backpropSegments[mapping][0]
+        #    post = backpropSegments[mapping - 1][0]
+        #    for key in post:
+        #        if key not in current:
+        #            current[key] = post[key]
 
-        for mapping in range(1, len(backpropSegments)):
-            current = backpropSegments[mapping][0]
-            post = backpropSegments[mapping - 1][0]
-            for key in post:
-                if key not in current:
-                    current[key] = post[key]
-
-        return qubitMappings
+        return optSegments, cost
 
 
     def swap(self, Circuit,q, arg0, arg1):

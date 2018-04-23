@@ -14,11 +14,13 @@ def Embed(QCircuit, coupling):
     segments = EmbedAlgorithm.Greedy(helpers)
 
     # K = 0
-    #optSegments = helpers.localSelect(segments)
+    optSegments1, cost1 = helpers.localSelect(segments)
 
     #K > 0
-    optSegments = helpers.selectSegments(segments,2)
-    NewCircuit = helpers.RebuildCircuit(optSegments,segments)
-    return NewCircuit
+    optSegments2, cost2 = helpers.selectSegments(segments,2)
+    NewCircuit1 = helpers.RebuildCircuit(optSegments1,segments)
+
+    NewCircuit2 = helpers.RebuildCircuit(optSegments2,segments)
+    return NewCircuit2
 
 
