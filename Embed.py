@@ -17,7 +17,7 @@ def Embed(QCircuit, coupling):
     #optSegments = helpers.localSelect(segments)
 
     #K > 0
-    optSegments = helpers.selectSegments(segments, 2)
+    optSegments = helpers.selectSegments(segments,2)
     NewCircuit = helpers.RebuildCircuit(optSegments,segments)
     return NewCircuit
 
