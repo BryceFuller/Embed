@@ -5,7 +5,8 @@ This File is used to test/debug Embed.py
 #////////////////////////////////////////////////////////////////////
 
 import sys
-from EMBED.Embed import Embed, EmbedHelper
+from Embed import Embed
+from EmbedHelper import EmbedHelper
 if sys.version_info < (3, 5):
     raise Exception('Please use Python version 3.5 or greater.')
 
@@ -99,7 +100,7 @@ embedtest4.cx(q4[10],q4[11])
 embedtest4.cx(q4[10],q4[12])
 embedtest4.cx(q4[10],q4[13])
 
-#result = Embed(embedtest4, testCoupling4)
+#result, cost = Embed(embedtest4, testCoupling4)
 
 
 
@@ -123,9 +124,9 @@ embedtest5.cx(q5[10],q5[11])
 embedtest5.cx(q5[10],q5[12])
 embedtest5.cx(q5[10],q5[13])
 
-result = Embed(embedtest5, testCoupling5)
+result, cost = Embed(embedtest5, testCoupling5)
 
-print(result)
+print(result, cost)
 
 
 

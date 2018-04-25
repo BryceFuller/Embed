@@ -1,8 +1,7 @@
 import copy
 from qiskit import QuantumCircuit, QuantumProgram
 
-from EMBED import EmbedHelper
-
+# from EmbedHelper import EmbedHelper
 
 def Greedy(helpers):
     QCircuit = helpers.QCircuit
