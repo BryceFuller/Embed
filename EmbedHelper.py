@@ -325,6 +325,11 @@ class EmbedHelper(object):
                         UnusedA.remove(V)
                         break
 
+        #Fail fast measure
+       # if MapA.keys() not in MapB.keys():
+       #     if MapB.keys() not in MapA.keys():
+       #         assert Exception
+
 
         #NOTE a choice was made here.
         # I decided that for pairs (None, #),(#, None) that # must be the same for both resulting in a single
@@ -340,14 +345,24 @@ class EmbedHelper(object):
             Bval = MapB[keys[1]]
 
             if(Aval == Bval):
-                path = self.shortestPath(Aval, (UnusedA & UnusedB))
-                MapB[keys[0]] = path[0]
-                InvB[path[0]] = keys[0]
-                MapA[keys[1]] = path[0]
-                InvA[path[0]] = keys[1]
-                UnusedA.remove(path[0])
-                UnusedB.remove(path[0])
-
+                targets = (UnusedA & UnusedB)
+                if len(targets) > 0:
+                    path = self.shortestPath(Aval, targets)
+                    MapB[keys[0]] = path[0]
+                    InvB[path[0]] = keys[0]
+                    UnusedB.remove(path[0])
+                    MapA[keys[1]] = path[0]
+                    InvA[path[0]] = keys[1]
+                    UnusedA.remove(path[0])
+                elif len(targets) == 0:
+                    pathA = self.shortestPath(Aval, UnusedA)
+                    MapA[keys[1]] = pathA[0]
+                    InvA[pathA[0]] = keys[1]
+                    UnusedA.remove(pathA[0])
+                    pathB = self.shortestPath(Bval, UnusedB)
+                    MapB[keys[0]] = pathB[0]
+                    InvB[pathB[0]] = keys[0]
+                    UnusedB.remove(pathB[0])
             else:
                 path1 = self.shortestPath(Aval, UnusedB)
                 MapB[keys[0]] = path1[0]
@@ -362,7 +377,7 @@ class EmbedHelper(object):
 
         #If somehow both maps are not defined for the same set of keys then something is horribly wrong.
         #Program should implode so it does not output nonsense.
-        if(len(MapA.keys()) != (MapB.keys())):
+        if(MapA.keys() != MapB.keys()):
             assert Exception
 
         #Now we will generate the list of swap paths, and convert this into the list of swap gates.
@@ -547,6 +562,7 @@ class EmbedHelper(object):
                     return min
                 if (type(sources[0]) == dict):
                     for source in range(len(sources)):
+                        #print(source)
                         costs = self.cost(0, source, sources[source], nodemap)
                         # costs[0] = costs[0] + sources[source][0]
                         if min == None:
