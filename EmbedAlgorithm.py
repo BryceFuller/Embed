@@ -1,7 +1,8 @@
 import copy
-from qiskit import QuantumCircuit, QuantumProgram
+#from qiskit import QuantumCircuit, QuantumProgram
 
-# from EmbedHelper import EmbedHelper
+#import EmbedHelper.Verbose
+
 
 def Greedy(helpers):
     QCircuit = helpers.QCircuit
@@ -35,7 +36,7 @@ def Greedy(helpers):
 
         start = segment.endIndex + 1
         segments.append(segment)
-        print("Segment ",len(segments)-1,"found with: ",len(segments[-1].global_maps) )
+        if (helpers.Verbose): print("Segment ",len(segments)-1,"found with: ",len(segments[-1].global_maps) )
 
     return segments
     #Select a map for each segment (greedily)

@@ -30,17 +30,18 @@ from statistics import stdev, mean
 
 # random.seed(a=12345)
 
-n = 3  # number of qubits
+n = 4  # number of qubits
 m = 7  # number of connections
-cn = 5  # number of CNOTs
+cn = 10  # number of CNOTs
 
-runs = 10 # number of random circuits
+runs = 2 # number of random circuits
 
 print("Testing Embed on", n, "qubits with", cn, "random CNOTs")
 
 # prevent infinite looping due to failure to connect
 connectfails = 0
 maxconnectfails = 10
+
 random.seed(0)
 
 #////////////////////////////////////////////////////////////////////
@@ -123,6 +124,7 @@ while len(costs) < runs:
 
     try:
         result, cost = Embed(embedtest, coupling)
+        print("Completed Test Case: ")
     except:
         print("Embed Crashed")
         pass

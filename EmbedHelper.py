@@ -56,11 +56,23 @@ class EmbedHelper(object):
         #print("init")
        # self.Instruction = Instruction
         self.Segment = Segment
-        self.Coupling = coupling
+        self.Coupling = self.cleanCoupling(coupling)
         self.UndirectedCoupling = self.directedToUndirected(coupling)
         self.QCircuit = QCircuit
         self.Instructions = self.reformatInstructions(QCircuit)
         self.Segments = []
+        self.Verbose = True
+
+
+    def cleanCoupling(self, coupling):
+        NewCoupling = {}
+        for key in coupling.keys():
+            for value in coupling[key]:
+                if key not in NewCoupling.keys():
+                    NewCoupling[key] = (value,)
+                elif value not in NewCoupling[key]:
+                    NewCoupling[key] = NewCoupling[key] + (value,)
+        return NewCoupling
 
     #Go through the directed graph coupling, and return the
     # same graph with undirected edges
@@ -82,8 +94,6 @@ class EmbedHelper(object):
 
 
     def isValid(self, qubit1, qubit2):
-
-
 
         if qubit1 in self.Coupling and qubit2 in self.Coupling[qubit1]:
             return True
@@ -169,10 +179,8 @@ class EmbedHelper(object):
                 #Get Embeddings
                 if (startFixed == False) & (endFixed == False):
                     for qubit1 in self.Coupling:
-                        if qubit1 in map:
+                        if qubit1 in map.values():
                             continue
-                        if (qubit1 not in self.Coupling):
-                            continue;
                         for qubit2 in self.Coupling[qubit1]:
                             if qubit2 in map.values():
                                 continue
@@ -656,7 +664,7 @@ class EmbedHelper(object):
 
         # Fill out the memoization table
         for segment in range(0, len(segments)):
-            print("Generating layer ", segment, " in memoization table")
+            if (self.Verbose): print("Generating layer ", segment, " in memoization table")
             qubitMappings.append([])
 
             if segment == 0:
@@ -717,7 +725,7 @@ class EmbedHelper(object):
 
     def selectSegments(self, segments, k=None):
 
-        print("Selecting Segment Mappings")
+        if (self.Verbose): print("Selecting Segment Mappings")
         # if k==None
         # traceback = []
         # costs = []
@@ -729,7 +737,7 @@ class EmbedHelper(object):
             return segments[0].global_maps[0]
         # Fill out the memoization table
         for segment in range(0, len(segments)):
-            print("Generating layer ", segment, " in memoization table")
+            if(self.Verbose): print("Generating layer ", segment, " in memoization table")
             qubitMappings.append([])
             # costs[segment] = []
             # traceback[segment] = []
