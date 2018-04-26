@@ -137,7 +137,7 @@ embedtest6.cx(q6[1],q6[2])
 embedtest6.cx(q6[2],q6[0])
 embedtest6.cx(q6[2],q6[1])
 
-result, cost = Embed(embedtest6, testcoupling6)
+result, cost = Embed(embedtest5, testcoupling5)
 
 print(result, cost)
 

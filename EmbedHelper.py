@@ -144,6 +144,7 @@ class EmbedHelper(object):
             Instruction = self.Instructions[instr];
 
             if (Instruction.operation != "cx"):
+                subsegment.endIndex = subsegment.endIndex + 1
                 continue
 
             #These two flags specify whether or not the target or control

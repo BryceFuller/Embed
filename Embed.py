@@ -22,6 +22,7 @@ def Embed(QCircuit, coupling):
     NewCircuit1 = helpers.RebuildCircuit(optSegments1,segments)
 
     NewCircuit2 = helpers.RebuildCircuit(optSegments2,segments)
+    print()
     return NewCircuit2, cost2
 
 
