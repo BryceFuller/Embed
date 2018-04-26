@@ -53,7 +53,7 @@ class EmbedHelper(object):
     Hcost = 1
 
     def __init__(self, QCircuit, coupling):
-        print("init")
+        #print("init")
        # self.Instruction = Instruction
         self.Segment = Segment
         self.Coupling = coupling
@@ -67,11 +67,12 @@ class EmbedHelper(object):
     def directedToUndirected(self, coupling):
         UndirectedCoupling = {}
         for key in coupling.keys():
-            UndirectedCoupling[key] = list(coupling[key])
+            UndirectedCoupling[key] = tuple(coupling[key])
         for key in coupling.keys():
             for value in coupling[key]:
                 if value in UndirectedCoupling:
-                    UndirectedCoupling[value].append(key)
+                    if key not in UndirectedCoupling[value]:
+                        UndirectedCoupling[value] = UndirectedCoupling[value] + (key,)
                 else:
                     UndirectedCoupling[value] = (key,)
         #for key in UndirectedCoupling.keys():
@@ -244,20 +245,11 @@ class EmbedHelper(object):
         InvA = self.invertMap(MapA)
         InvB = self.invertMap(MapB)
 
-
-        # get the keys, sort them as a list and make them into a queue
-        #Akeys = set(MapA.keys())
-        #Bkeys = set(MapB.keys())
         Keys = MapA.keys() | MapB.keys()
-
-        #Create a set for these values to achieve O(1) time for checking membership
-        #Avalues = set(MapA.values())
-        #Bvalues = set(MapB.values())
 
         Accessible = self.UndirectedCoupling.keys()
         UnusedA = Accessible - InvA.keys()
         UnusedB = Accessible - InvB.keys()
-
 
         revisit = set()
 
@@ -265,14 +257,6 @@ class EmbedHelper(object):
             NextKey = Keys.pop()
             Aval = None
             Bval = None
-
-            #This handles each line of the intermediate mappings in the
-            # manner specified by the Adef and Bdef flags
-            #if ((NextKey in MapA) & (NextKey in MapB)):
-                #Aval = MapA[NextKey]
-                #Bval = MapB[NextKey]
-               #revisit.add((Aval,Bval))
-                #Make note that this key has been handled.
 
             # (#, U, None)
             if ((NextKey in MapA) & (NextKey not in MapB)):
@@ -283,27 +267,26 @@ class EmbedHelper(object):
                 #Get key of Aval = *u
 
                 while (True):
+
                     # Is Aval in mapB.values?
                     if U in InvB:
                         Ukey = InvB[U]
+
                         #If MapA is defined for key = Ukey
                         if Ukey in MapA:
                             U = MapA[Ukey]
                             continue
+
                         else:
-                            #revisit.add((Aval, None))
                             revisit.add((NextKey, Ukey))
                             Keys.remove(Ukey)
 
-                            #MapB[NextKey] = -1-Ukey  #Add a placeholder here! Negative entries refer to the logical indices which a qubit would map from
-                            #InvB[-1-Ukey] = NextKey  # Ex Map[num] = -1-key means that logical qubit key's location is undefined, but that it must have
-                            #MapA[Ukey] = -1-Ukey               # been swapped with location of logical qubit num in the previous map
-                            #InvA[-1-Ukey] = Ukey
                             break
                     else:
                         MapB[NextKey] = U
                         InvB[U] = NextKey
                         UnusedB.remove(U)
+
                         break
 
             # (#, None, V)
@@ -327,11 +310,6 @@ class EmbedHelper(object):
                             revisit.add((Vkey, NextKey))
                             Keys.remove(Vkey)
 
-                            #revisit.add((None, V))
-                            #MapA[NextKey] = (-1 - Vkey)  # Add a placeholder here! Negative entries refer to the logical indices which a qubit would map from
-                            #InvA[-1-Vkey] = NextKey  # Ex Map[num] = -1-key means that logical qubit key's location is undefined, but that it must have
-                            #MapB[Vkey] = (-1 - Vkey)                   # been swapped with location of logical qubit num in the previous map
-                            #InvB[-1-Vkey] = Vkey
                             break
                     else:
                         MapA[NextKey] = V
@@ -362,7 +340,6 @@ class EmbedHelper(object):
                 UnusedA.remove(path[0])
                 UnusedB.remove(path[0])
 
-            #Note, this is where the bug is, need to fix this part.
             else:
                 path1 = self.shortestPath(Aval, UnusedB)
                 MapB[keys[0]] = path1[0]
@@ -375,8 +352,8 @@ class EmbedHelper(object):
                 UnusedA.remove(path2[0])
 
 
-        #If somehow both maps are not filled out then something is horribly awry.
-        # Program should implode so it does not output nonsense.
+        #If somehow both maps are not defined for the same set of keys then something is horribly wrong.
+        #Program should implode so it does not output nonsense.
         if(len(MapA.keys()) != (MapB.keys())):
             assert Exception
 
@@ -675,7 +652,7 @@ class EmbedHelper(object):
 
         # Corner case, only one segment
         if len(segments) == 1:
-            return segments[0].global_maps[0]
+            return [segments[0].global_maps[0]], 0
 
         # Fill out the memoization table
         for segment in range(0, len(segments)):
@@ -869,12 +846,13 @@ class EmbedHelper(object):
                     arg0 = optSegments[segment][0][arg0]
                     arg1 = optSegments[segment][0][arg1]  # TODO test this part, I never got to it
                     instr = "NewCircuit." + command + "(q[" + str(arg0) + "], q[" + str(arg1) + "])"
-                    print(instr)
+                    #print(instr)
                     exec(instr)
             print  # NOW do all the swap gates.
-            for swap in optSegments[segment][1]:
-                print("swap(" + str(swap[0]) + ", " + str(swap[1]) + ")")
-                self.swap(NewCircuit, q, swap[0], swap[1])
+            if len(optSegments) > 1:
+                for swap in optSegments[segment][1]:
+                    #print("swap(" + str(swap[0]) + ", " + str(swap[1]) + ")")
+                    self.swap(NewCircuit, q, swap[0], swap[1])
 
         return NewCircuit
 

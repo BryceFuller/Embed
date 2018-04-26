@@ -41,6 +41,7 @@ print("Testing Embed on", n, "qubits with", cn, "random CNOTs")
 # prevent infinite looping due to failure to connect
 connectfails = 0
 maxconnectfails = 10
+random.seed(0)
 
 #////////////////////////////////////////////////////////////////////
 
