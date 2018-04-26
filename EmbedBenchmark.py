@@ -30,8 +30,8 @@ from statistics import stdev, mean
 
 # random.seed(a=12345)
 
-n = 4  # number of qubits
-m = 7  # number of connections
+n = 13  # number of qubits
+m = 15  # number of connections
 cn = 10  # number of CNOTs
 
 runs = 2 # number of random circuits
@@ -77,7 +77,7 @@ while len(costs) < runs:
     Q_program = QuantumProgram()
     qreg = Q_program.create_quantum_register("qreg", n)
     creg = Q_program.create_classical_register("creg", 1)
-    embedtest = Q_program.create_circuit("QCircuit5", [qreg], [creg])
+    embedtest = Q_program.create_circuit("QCircuit", [qreg], [creg])
 
     # generate random coupling
     coupling = {}
@@ -93,7 +93,7 @@ while len(costs) < runs:
             coupling[i] = [j]
             l += 1
         else:
-            if i not in coupling[i]:
+            if j not in coupling[i]:
                 coupling[i].append(j)
                 l += 1
 
@@ -112,6 +112,7 @@ while len(costs) < runs:
     for i in coupling.keys(): coupling[i] = tuple(sorted(coupling[i]))
 
     # generate circuit
+    circtext = []
     for l in range(cn):
         i, j = 0,0
         while i == j:
@@ -119,21 +120,31 @@ while len(costs) < runs:
             j = random.randint(0, n-1)
 
         embedtest.cx(qreg[i],qreg[j])
+        circtext.append("embedtest.cx(qreg["+str(i)+"],qreg["+str(j)+"])")
 
     start = time.time()
 
     try:
         result, cost = Embed(embedtest, coupling)
-        print("Completed Test Case: ")
-    except:
-        print("Embed Crashed")
-        pass
+        print("Completed Test Case")
+        dt = time.time() - start
+        cost = random.randint(0,100)
 
-    dt = time.time() - start
-    cost = random.randint(0,100)
+        times.append(dt)
+        costs.append(cost)
+    except Exception as e:
+        print("\nEmbed crashed. Test case:")
+        print("Q_program = QuantumProgram()")
+        print("qreg = Q_program.create_quantum_register('qreg',", n ,")")
+        print("creg = Q_program.create_classical_register('creg', 1)")
+        print("embedtest = Q_program.create_circuit('QCircuit', [qreg], [creg])")
+        print("coupling =", coupling)
+        for c in circtext: print(c)
 
-    times.append(dt)
-    costs.append(cost)
 
-print("Time taken: %.3f +- %.3f" % (mean(times), stdev(times)))
-print("Embed cost: %.3f +- %.3f" % (mean(costs), stdev(costs)))
+        print("\nException:")
+        raise e
+
+if len(times) > 1:
+    print("Time taken: %.3f +- %.3f" % (mean(times), stdev(times)))
+    print("Embed cost: %.3f +- %.3f" % (mean(costs), stdev(costs)))
