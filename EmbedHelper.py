@@ -652,7 +652,8 @@ class EmbedHelper(object):
 
             else:
                 # index = nextIndex + prevSeg[1]
-                prevSeg = self.grabElement(qubitMappings[segment], nextIndex + (prevSeg[1],))
+                nextIndex = nextIndex + (prevSeg[1],)
+                prevSeg = self.grabElement(qubitMappings[segment], nextIndex)
                 optSegs.append((prevSeg[3], prevSeg[2]))
                 continue
 
