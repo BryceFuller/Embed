@@ -106,10 +106,10 @@ embedtest4.cx(q4[10],q4[13])
 
 #////////////////////////////////////////////////////////////////////
 
-testCoupling5 = {0: (1,2,3,4), 1:(5,9), 2:(6,10), 3:(7,11), 4:(8,12)}
+testcoupling5 = {0: (1,2,3,4), 1:(5,9), 2:(6,10), 3:(7,11), 4:(8,12)}
 q5 = Q_program.create_quantum_register("q5", 15)
 c5 = Q_program.create_classical_register("c5", 15)
-embedtest5 = Q_program.create_circuit("QCircuit5", [q5], [c5])
+embedtest5 = Q_program.create_circuit("qcircuit5", [q5], [c5])
 
 embedtest5.cx(q5[0],q5[1])
 embedtest5.cx(q5[0],q5[2])
@@ -124,7 +124,20 @@ embedtest5.cx(q5[10],q5[11])
 embedtest5.cx(q5[10],q5[12])
 embedtest5.cx(q5[10],q5[13])
 
-result, cost = Embed(embedtest5, testCoupling5)
+#////////////////////////////////////////////////////////////////////
+
+testcoupling6 = {0: (1,2)}
+q6 = Q_program.create_quantum_register("q6", 3)
+c6 = Q_program.create_classical_register("c6", 3)
+embedtest6 = Q_program.create_circuit("qcircuit6", [q6], [c6])
+
+embedtest6.cx(q6[0],q6[1])
+embedtest6.cx(q6[2],q6[0])
+embedtest6.cx(q6[1],q6[2])
+embedtest6.cx(q6[2],q6[0])
+embedtest6.cx(q6[2],q6[1])
+
+result, cost = Embed(embedtest6, testcoupling6)
 
 print(result, cost)
 

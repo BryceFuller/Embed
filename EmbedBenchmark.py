@@ -30,9 +30,9 @@ from statistics import stdev, mean
 
 # random.seed(a=12345)
 
-n = 5  # number of qubits
+n = 3  # number of qubits
 m = 7  # number of connections
-cn = 10  # number of CNOTs
+cn = 5  # number of CNOTs
 
 runs = 10 # number of random circuits
 
@@ -80,17 +80,20 @@ while len(costs) < runs:
     # generate random coupling
     coupling = {}
 
-    for l in range(m):
+    l = 0
+    while l < m:
         i, j = 0,0
         while i == j:
             i = random.randint(0, n-1)
             j = random.randint(0, n-1)
 
-        if i not in coupling: coupling[i] = [j]
+        if i not in coupling:
+            coupling[i] = [j]
+            l += 1
         else:
             if i not in coupling[i]:
                 coupling[i].append(j)
-            else: l -= 1
+                l += 1
 
     # coupling = {0: [1,3,2,4], 1:[5,9], 2:[6,10], 3:[7,11], 4:[8,12]}
     # coupling = {0: [1,2]}
@@ -116,6 +119,7 @@ while len(costs) < runs:
         embedtest.cx(qreg[i],qreg[j])
 
     start = time.time()
+
     try:
         result, cost = Embed(embedtest, coupling)
     except:
