@@ -18,6 +18,27 @@ import Qconfig
 
 # Quantum program setup
 #Q_program.set_api(Qconfig.APItoken, Qconfig.config["url"])
+Q_program = QuantumProgram()
+testcoupling5 = {0: (1,2,3,4), 1:(5,9), 2:(6,10), 3:(7,11), 4:(8,12)}
+q5 = Q_program.create_quantum_register("q5", 15)
+c5 = Q_program.create_classical_register("c5", 15)
+embedtest5 = Q_program.create_circuit("qcircuit5", [q5], [c5])
+
+embedtest5.cx(q5[0],q5[1])
+embedtest5.cx(q5[0],q5[2])
+embedtest5.h(q5[0])
+embedtest5.cx(q5[0],q5[3])
+embedtest5.cx(q5[0],q5[5])
+embedtest5.cx(q5[5],q5[6])
+embedtest5.cx(q5[5],q5[7])
+embedtest5.cx(q5[5],q5[8])
+embedtest5.cx(q5[5],q5[10])
+embedtest5.cx(q5[10],q5[11])
+embedtest5.cx(q5[10],q5[12])
+embedtest5.cx(q5[10],q5[13])
+
+result, cost = Embed(embedtest5, testcoupling5)
+
 
 #////////////////////////////////////////////////////////////////////
 

@@ -62,6 +62,7 @@ class EmbedHelper(object):
         self.Instructions = self.reformatInstructions(QCircuit)
         self.Segments = []
         self.Verbose = True
+        self.HasCycles = self.hasCycles()
 
 
     def cleanCoupling(self, coupling):
@@ -92,6 +93,22 @@ class EmbedHelper(object):
 
         return UndirectedCoupling
 
+    def hasCycles(self):
+        available = set()
+        visited = set()
+        node = list(self.UndirectedCoupling)[0]
+        traceback = {}
+        while len(available) > 0:
+            visited.add(node)
+            for i in self.UndirectedCoupling[node]:
+                if (i in visited) and (traceback[node] != i):
+                    return True
+                available.add((node, i))
+            newnode = available.pop()
+            traceback[newnode[1]] = newnode[0]
+            node = newnode[1]
+
+        return False
 
     def isValid(self, qubit1, qubit2):
 
@@ -380,7 +397,7 @@ class EmbedHelper(object):
         if(MapA.keys() != MapB.keys()):
             assert Exception
 
-        #Now we will generate the list of swap paths, and convert this into the list of swap gates.
+        #Now we will generate a list of swap paths, and convert this into a list of swap gates.
         #From here we can return a cost based upon the solution we have found
         valid = 0
         swapPaths = []
@@ -457,6 +474,46 @@ class EmbedHelper(object):
 
         return (cost + prevcost, traceback, swaps, MapA, MapB)
 
+    #Takes in a list of target nodes and returns an undirected MST between those nodes. 
+    def MST(coupling, targs):
+        MST = {}
+
+        if len(targs) == 0:
+            assert Exception
+
+        accessible = []
+        visited = set()
+        targets = set(targs)
+        target = targets.pop()
+        while len(targets) > 0:
+
+            visited.add(target)
+            tscore = score(UC, targs, target)
+
+            for i in UC[target]:
+                if i not in visited:
+                    Score = float(1 / (score(UC, targs, i) + tscore))
+                    H.heappush(accessible, (Score, (i, target)))
+
+            Min = H.heappop(accessible)
+            VisitedNode = Min[1][1]
+            NewNode = Min[1][0]
+
+            if NewNode in MST:
+                assert Exception
+            if VisitedNode not in MST:
+                MST[VisitedNode] = (NewNode,)
+            else:
+                MST[VisitedNode] = MST[VisitedNode] + (NewNode,)
+            MST[NewNode] = (VisitedNode,)
+
+            target = Min[1][0]
+            if target in targets:
+                targets.remove(target)
+
+        return MST
+
+
     def invertMap(self, map):
         invMap = {}
         for key in map.keys():
@@ -495,10 +552,12 @@ class EmbedHelper(object):
     #Take as input a start qubit and
     # either a single or tuple of potential ending qubits.
     # returns a list specifying the path from end to start
-    def shortestPath(self, start, ends):
+    def shortestPath(self, start, ends, connectivity=None):
         visited = set()
         traceback = {start: None}
         discovered = [start]
+        if connectivity == None:
+            connectivity = self.UndirectedCoupling
         while discovered:
             vertex = discovered.pop(0)
             if vertex not in visited:

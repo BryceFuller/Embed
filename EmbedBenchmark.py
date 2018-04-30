@@ -30,11 +30,11 @@ from statistics import stdev, mean
 
 # random.seed(a=12345)
 
-n = 13  # number of qubits
-m = 15  # number of connections
-cn = 10  # number of CNOTs
+n = 20  # number of qubits
+m = 30  # number of connections
+cn = 5  # number of CNOTs
 
-runs = 2 # number of random circuits
+runs = 10 # number of random circuits
 
 print("Testing Embed on", n, "qubits with", cn, "random CNOTs")
 
@@ -128,7 +128,7 @@ while len(costs) < runs:
         result, cost = Embed(embedtest, coupling)
         print("Completed Test Case")
         dt = time.time() - start
-        cost = random.randint(0,100)
+
 
         times.append(dt)
         costs.append(cost)
