@@ -16,6 +16,9 @@ if sys.version_info < (3, 5):
 from qiskit import QuantumCircuit, QuantumProgram
 import Qconfig
 
+
+
+
 # Quantum program setup
 #Q_program.set_api(Qconfig.APItoken, Qconfig.config["url"])
 Q_program = QuantumProgram()

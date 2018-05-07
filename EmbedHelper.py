@@ -403,6 +403,11 @@ class EmbedHelper(object):
         swapPaths = []
         InvKeys = InvA.keys() | InvB.keys()
 
+        if self.HasCycles == True:
+            mst = self.MST()
+        else:
+            mst = None
+
         #Get a copy of InvA we can modify without destroying original
         TinvA = copy.deepcopy(InvA)
 
@@ -446,7 +451,7 @@ class EmbedHelper(object):
         swaps = list()
         #Expand swapPaths into an actual sequence of swap gates.
         for sp in swapPaths:
-            path = self.shortestPath(sp[0],sp[1])
+            path = self.shortestPath(sp[0],sp[1],mst)
             if(len(path) == 2):
                 swaps.append(tuple(path))
             else:
@@ -454,6 +459,9 @@ class EmbedHelper(object):
                     swaps.append((path[i],path[i+1]))
                 for i in range(len(path)-1):
                     swaps.append((path[-i-2],path[-i-1]))
+
+        #DISTILL SWAP GATES
+        swaps = self.distillSwaps(swaps)
 
 
         for swap in swaps:
@@ -474,7 +482,154 @@ class EmbedHelper(object):
 
         return (cost + prevcost, traceback, swaps, MapA, MapB)
 
-    #Takes in a list of target nodes and returns an undirected MST between those nodes. 
+
+
+    def distillSwaps(self, swaps):
+        a = None
+        b = None
+        c = None
+        while True:
+           if not self.simplifyOnce(swaps):
+               break
+
+        return swaps
+
+
+
+
+                #If element+1 defined:
+                    #Try to translate Up? (For each permutation)
+
+                    #For all downstream permutations (including identity permutation),
+
+                    #Translate Down?
+
+                #
+    def simplifyOnce(self, swaps):
+
+        for sw in range(len(swaps)):
+
+            T1Elems = set()
+            T1Elems.add(swaps[sw][0])
+            T1Elems.add(swaps[sw][1])
+
+            #TODO Can I translate this swap up or down to get a cancellation?
+
+            # If there's an identity mapping...
+            if len(T1Elems) == 1:
+                assert Exception
+                print("HANDLE THIS")
+
+            # If there's room for permutations
+            if sw + 1 < len(swaps):
+                permutable1, elems1 = self.canPermute(swaps[sw],swaps[sw+1])
+
+                # These two cancel
+                if len(elems1) == 2:
+                    swaps.pop(sw + 1)
+                    swaps.pop(sw)
+                    return True
+
+            else:
+                permutable1 = False
+
+
+
+            # i, i+1 can be permuted
+            if permutable1:
+
+                if sw+3 < len(swaps):
+                    permutable2, elems2 = self.canPermute(swaps[sw+2], swaps[sw+3])
+
+                    #i+2, i+3 can be permuted
+                    if permutable2:
+
+                        ComElems = elems1 & elems2
+
+                        if len(ComElems) >= 2:
+                            cancel = set()
+                            cancel.append(ComElems.pop())
+                            cancel.append(ComElems.pop())
+                            remainder1 = ()
+                            remainder2 = ()
+                            if elems1[0] in cancel and elems1[1] in cancel: remainder1 = (elems1[1], elems1[2])
+                            if elems1[0] in cancel and elems1[2] in cancel: remainder1 = (elems1[1], elems1[0])
+                            if elems1[1] in cancel and elems1[2] in cancel: remainder1 = (elems1[2], elems1[0])
+                            if elems2[0] in cancel and elems2[1] in cancel: remainder2 = (elems2[2], elems2[0])
+                            if elems2[0] in cancel and elems2[2] in cancel: remainder2 = (elems2[2], elems2[1])
+                            if elems2[1] in cancel and elems2[2] in cancel: remainder2 = (elems2[0], elems2[1])
+                            swaps[sw] = remainder1
+                            swaps[sw + 3] = remainder2
+                            swaps.pop(sw + 2)
+                            swaps.pop(sw + 1)
+                            return True
+
+
+                # i+2, i+3 are not permutable
+                else:
+                    if self.checkTranslation(swaps, (elems1[0],elems1[1]), sw, True): return True
+                    if self.checkTranslation(swaps, (elems1[0], elems1[2]), sw, True): return True
+                    if self.checkTranslation(swaps, (elems1[1], elems1[2]), sw, True): return True
+                    if self.checkTranslation(swaps, (elems1[0], elems1[1]), sw+1, False): return True
+                    if self.checkTranslation(swaps, (elems1[0], elems1[2]), sw+1, False): return True
+                    if self.checkTranslation(swaps, (elems1[1], elems1[2]), sw+1, False): return True
+
+            else: #i,i+1 cannot be permuted, so check for translations
+                if self.checkTranslation(swaps, swaps[sw], sw, True): return True
+                if self.checkTranslation(swaps, swaps[sw], sw, False): return True
+        return False
+
+
+    def canPermute(self, swap1, swap2):
+        Elems1, Elems2 = set(), set()
+        Elems1.add(swap1[0])
+        Elems1.add(swap1[1])
+        Elems2.add(swap2[0])
+        Elems2.add(swap2[1])
+        Elems = Elems1 | Elems2
+        if len(Elems) == 3:
+            a = (Elems1 & Elems2)
+            b = (Elems1 - a).pop()
+            c = (Elems2 - a).pop()
+            a = a.pop()
+            if c in self.UndirectedCoupling[b]:
+                return True, [a,b,c]
+            else:
+                return False, [a,b,c]
+        return False, list(Elems)
+
+    #Check if a swap sw at index i can be translated up, or down (Up=False) to get a cancellation
+    #If a cancellation is found, it is removed,
+    def checkTranslation(self, swaps, sw, i, Up=True):
+        if Up:
+            for j in range(1,i):
+                elems = set()
+                elems.add(swaps[i - j][0])
+                elems.add(swaps[i - j][1])
+                if sw[0] in elems and sw[1] in elems:
+                    swaps.pop(j)
+                    swaps.pop(i-j)
+                    return True
+                if sw[0] not in elems and sw[1] not in elems:
+                    continue
+                return False
+
+        else: #Do Down
+            for j in range(i+1, len(swaps)-i):
+                elems = set()
+                elems.add(swaps[i + j][0])
+                elems.add(swaps[i + j][1])
+                if sw[0] in elems and sw[1] in elems:
+                    swaps.pop(i + j)
+                    swaps.pop(j)
+                    return True
+                if sw[0] not in elems and sw[1] not in elems:
+                    continue
+                return False
+
+    #def cancel(self,):
+
+    #Takes in a list of target nodes and returns an undirected MST between those nodes.
     def MST(coupling, targs):
         MST = {}
 

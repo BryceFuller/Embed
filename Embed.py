@@ -14,6 +14,15 @@ def Embed(QCircuit, coupling):
     helpers = EmbedHelper(QCircuit, coupling)
     segments = Greedy(helpers)
 
+    #Testing stuff!
+
+    swaps1 = [(4, 0), (9, 1), (5, 1), (1, 0), (0, 2), (1, 0), (5, 1)]
+    swaps2 = [(0,1),(0,2),(0,1),(0,1),(0,3),(0,2),(0,3)]
+    #sw = helpers.distillSwaps(swaps2)
+
+    #End of Testing Stuff
+
+
     if len(segments) == 1:
         NewCircuit3 = helpers.RebuildCircuit([[segments[0].global_maps[0]]],segments)
         return NewCircuit3, 0
