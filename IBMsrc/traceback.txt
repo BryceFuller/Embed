@@ -1,0 +1,54 @@
+result = evaluate(compiler_function, test_circuits, verbose=False, backend = backend)
+  File "/home/prall/challenge_24_1_2018/challenge_evaluation.py", line 235, in evaluate
+    seed=None)
+  File "/home/prall/challenge_24_1_2018/challenge_evaluation.py", line 539, in _compose_qobj
+    dag_circuit = copy.deepcopy(circuit["dag_"+qobj_name])
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 280, in _reconstruct
+    state = deepcopy(state, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 240, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+  File "/usr/lib/python3.6/copy.py", line 150, in deepcopy
+    y = copier(x, memo)
+  File "/usr/lib/python3.6/copy.py", line 215, in _deepcopy_list
+    append(deepcopy(a, memo))
+  File "/usr/lib/python3.6/copy.py", line 180, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+  File "/usr/lib/python3.6/copy.py", line 274, in _reconstruct
+    y = func(*args)
+  File "/usr/lib/python3.6/site-packages/sympy/core/operations.py", line 41, in __new__
+    c_part, nc_part, order_symbols = cls.flatten(args)
+  File "/usr/lib/python3.6/site-packages/sympy/core/add.py", line 136, in flatten
+    coeff += o
+  File "/usr/lib/python3.6/site-packages/sympy/core/numbers.py", line 2036, in __add__
+    return Rational.__add__(self, other)
+  File "/usr/lib/python3.6/site-packages/sympy/core/decorators.py", line 91, in __sympifyit_wrapper
+    return func(a, b)
+  File "/usr/lib/python3.6/site-packages/sympy/core/numbers.py", line 1561, in __add__
+    return other + self
+  File "/usr/lib/python3.6/site-packages/sympy/core/decorators.py", line 91, in __sympifyit_wrapper
+    return func(a, b)
+  File "/usr/lib/python3.6/site-packages/sympy/core/numbers.py", line 1155, in __add__
+    return Float._new(mlib.mpf_add(self._mpf_, rhs, prec, rnd), prec)
+  File "/usr/lib/python3.6/site-packages/mpmath/libmp/libmpf.py", line 769, in mpf_add
+    return normalize1(ssign, sman, sexp, sbc, prec or sbc, rnd)
+TypeError: argument is not an mpz

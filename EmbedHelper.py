@@ -1,5 +1,6 @@
 import copy
 from qiskit import QuantumCircuit, QuantumProgram
+import qiskit
 import collections
 
 """
@@ -491,7 +492,7 @@ class EmbedHelper(object):
         a = None
         b = None
         c = None
-        print("Initial len = " + str(len(swaps)))
+        # print("Initial len = " + str(len(swaps)))
 
         #Debugging stuff
         swaps2 = copy.deepcopy(swaps)
@@ -501,7 +502,7 @@ class EmbedHelper(object):
            if not self.simplifyOnce(swaps):
                break
            self.verifySwapDistillation(swaps2, swaps)
-        print("-> " + str(len(swaps)))
+        # print("-> " + str(len(swaps)))
         return swaps
 
 
@@ -1107,7 +1108,9 @@ class EmbedHelper(object):
                     if (arg0 not in optSegments[segment][0].keys()):
                         assert Exception
                     arg0 = optSegments[segment][0][arg0]
-                    instr = "NewCircuit." + command + "(q[" + str(arg0) + "])"
+                    instr = "NewCircuit." + command + "("
+                    instr += ",".join(list(map(str,QCircuit.data[i].param))+[""])
+                    instr += "q[" + str(arg0) + "])"
                     exec(instr)
 
                 if (double):
@@ -1117,9 +1120,15 @@ class EmbedHelper(object):
                         assert Exception  # Something terrible happened.
                     arg0 = optSegments[segment][0][arg0]
                     arg1 = optSegments[segment][0][arg1]  # TODO test this part, I never got to it
-                    instr = "NewCircuit." + command + "(q[" + str(arg0) + "], q[" + str(arg1) + "])"
+
+                    if isinstance(QCircuit.data[i], qiskit.Measure):
+                        instr = "NewCircuit." + command + "(q[" + str(arg0) + "], c[" + str(arg1) + "])"
+                    else:
+                        instr = "NewCircuit." + command + "(q[" + str(arg0) + "], q[" + str(arg1) + "])"
                     #print(instr)
                     exec(instr)
+
+
             print  # NOW do all the swap gates.
             if len(optSegments) > 1:
                 for swap in optSegments[segment][1]:
