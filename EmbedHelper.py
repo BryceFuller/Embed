@@ -461,7 +461,10 @@ class EmbedHelper(object):
                     swaps.append((path[-i-2],path[-i-1]))
 
         #DISTILL SWAP GATES
+        oldswaps = copy.deepcopy(swaps)
         swaps = self.distillSwaps(swaps)
+        if not self.verifySwapDistillation(oldswaps, swaps):
+            assert Exception
 
 
         for swap in swaps:
@@ -488,10 +491,17 @@ class EmbedHelper(object):
         a = None
         b = None
         c = None
+        print("Initial len = " + str(len(swaps)))
+
+        #Debugging stuff
+        swaps2 = copy.deepcopy(swaps)
+        #/////////
+
         while True:
            if not self.simplifyOnce(swaps):
                break
-
+           self.verifySwapDistillation(swaps2, swaps)
+        print("-> " + str(len(swaps)))
         return swaps
 
 
@@ -544,7 +554,7 @@ class EmbedHelper(object):
                     #i+2, i+3 can be permuted
                     if permutable2:
 
-                        ComElems = elems1 & elems2
+                        ComElems = set(elems1) & set(elems2)
 
                         if len(ComElems) >= 2:
                             cancel = set()
@@ -614,11 +624,11 @@ class EmbedHelper(object):
                     continue
                 return False
 
-        else: #Do Down
-            for j in range(i+1, len(swaps)-i):
+        else: #For Down
+            for j in range(1, len(swaps)-i):
                 elems = set()
                 elems.add(swaps[i + j][0])
-                elems.add(swaps[i + j][1])
+                elems.add(swaps[i + j ][1])
                 if sw[0] in elems and sw[1] in elems:
                     swaps.pop(i + j)
                     swaps.pop(j)
@@ -628,6 +638,30 @@ class EmbedHelper(object):
                 return False
 
     #def cancel(self,):
+    def verifySwapDistillation(self, init, final):
+        map1 = {}
+        map2 = {}
+        for sw in init:
+            if sw[0] not in map1:
+                map1[sw[0]] = sw[0]
+            if sw[1] not in map1:
+                map1[sw[1]] = sw[1]
+            temp = map1[sw[0]]
+            map1[sw[0]] = map1[sw[1]]
+            map1[sw[1]] = temp
+
+        for sw in final:
+            if sw[0] not in map2:
+                map2[sw[0]] = sw[0]
+            if sw[1] not in map2:
+                map2[sw[1]] = sw[1]
+            temp = map2[sw[0]]
+            map2[sw[0]] = map2[sw[1]]
+            map2[sw[1]] = temp
+
+        if map1 != map2:
+            return False
+        return True
 
     #Takes in a list of target nodes and returns an undirected MST between those nodes.
     def MST(coupling, targs):
@@ -643,7 +677,7 @@ class EmbedHelper(object):
         while len(targets) > 0:
 
             visited.add(target)
-            tscore = score(UC, targs, target)
+            tscore = self.score(UC, targs, target)
 
             for i in UC[target]:
                 if i not in visited:
