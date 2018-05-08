@@ -31,8 +31,8 @@ from statistics import stdev, mean
 # random.seed(a=12345)
 
 n = 10  # number of qubits
-m = 40  # number of connections
-cn = 50  # number of CNOTs
+m = 20  # number of connections
+cn = 10  # number of CNOTs
 
 runs = 10 # number of random circuits
 
@@ -127,9 +127,17 @@ while len(costs) < runs:
     try:
         result, cost = Embed(embedtest, coupling)
         print("cost = " +  str(cost))
-       # print(result)
         dt = time.time() - start
 
+        embedValid = True
+        for gate in result.data:
+            if gate.name not in ["cx", "CX"]: continue
+            ctl = gate.arg[0][1]
+            trg = gate.arg[1][1]
+            if ctl not in coupling or trg not in coupling[ctl]:
+                print("Disallowed CNOT:", ctl, "->", trg)
+                embedValid = False
+        if not embedValid: raise Exception("Embedding uses disallowed CNOT")
 
         times.append(dt)
         costs.append(cost)

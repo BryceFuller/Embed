@@ -62,6 +62,20 @@ if True:
     embedtest.cx(qreg[3],qreg[6])
     embedtest.cx(qreg[9],qreg[4])
 
+print(coupling)
+
 result, cost = Embed(embedtest, coupling)
 
 print(result, cost)
+
+embedValid = True
+for gate in result.data:
+    if gate.name not in ["cx", "CX"]: continue
+    ctl = gate.arg[0][1]
+    trg = gate.arg[1][1]
+    if ctl not in coupling or trg not in coupling[ctl]:
+        print("Disallowed CNOT:", ctl, "->", trg)
+        embedValid = False
+if embedValid: print("All CNOTs used are permitted.")
+
+
