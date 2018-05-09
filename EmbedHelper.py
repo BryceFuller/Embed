@@ -567,8 +567,8 @@ class EmbedHelper(object):
 
                         if len(ComElems) >= 2:
                             cancel = set()
-                            cancel.append(ComElems.pop())
-                            cancel.append(ComElems.pop())
+                            cancel.add(ComElems.pop())
+                            cancel.add(ComElems.pop())
                             remainder1 = ()
                             remainder2 = ()
                             if elems1[0] in cancel and elems1[1] in cancel: remainder1 = (elems1[1], elems1[2])
