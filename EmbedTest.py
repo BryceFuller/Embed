@@ -16,6 +16,25 @@ if sys.version_info < (3, 5):
 from qiskit import QuantumCircuit, QuantumProgram
 import Qconfig
 
+print()
+
+
+Q_program = QuantumProgram()
+qreg = Q_program.create_quantum_register('qreg', 10 )
+creg = Q_program.create_classical_register('creg', 1)
+embedtest = Q_program.create_circuit('QCircuit', [qreg], [creg])
+coupling = {0: (6, 9), 1: (4, 6), 2: (0, 3, 7), 3: (2, 4), 4: (2, 7, 8), 5: (4,), 6: (2,), 7: (1, 3, 5, 6), 8: (9,), 9: (0,)}
+embedtest.cx(qreg[0],qreg[7])
+embedtest.cx(qreg[4],qreg[0])
+embedtest.cx(qreg[9],qreg[1])
+embedtest.cx(qreg[3],qreg[5])
+embedtest.cx(qreg[5],qreg[7])
+embedtest.cx(qreg[3],qreg[0])
+embedtest.cx(qreg[2],qreg[3])
+embedtest.cx(qreg[4],qreg[2])
+embedtest.cx(qreg[8],qreg[7])
+embedtest.cx(qreg[2],qreg[1])
+result, cost = Embed(embedtest, coupling)
 
 
 

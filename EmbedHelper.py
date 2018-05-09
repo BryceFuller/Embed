@@ -1,6 +1,7 @@
 import copy
 from qiskit import QuantumCircuit, QuantumProgram
 import qiskit
+import inspect
 import collections
 
 """
@@ -20,6 +21,7 @@ EX: COMPLICATED_GATE(q[1], q[4], c[3], q[71])
 class Instruction(object):
 
     def __init__(self, instruction):
+        print(inspect.getfile(qiskit))
         self.operation = instruction.name
 
 
@@ -496,12 +498,18 @@ class EmbedHelper(object):
 
         #Debugging stuff
         swaps2 = copy.deepcopy(swaps)
+        swaps3 = copy.deepcopy(swaps)
         #/////////
 
         while True:
+           swaps4 = copy.deepcopy(swaps3)
+           self.simplifyOnce(swaps3)
+           if not self.verifySwapDistillation(swaps2,swaps3):
+               print("SHIT")
            if not self.simplifyOnce(swaps):
                break
-           self.verifySwapDistillation(swaps2, swaps)
+           if not self.verifySwapDistillation(swaps2, swaps):
+               assert Exception
         # print("-> " + str(len(swaps)))
         return swaps
 
@@ -632,7 +640,7 @@ class EmbedHelper(object):
                 elems.add(swaps[i + j ][1])
                 if sw[0] in elems and sw[1] in elems:
                     swaps.pop(i + j)
-                    swaps.pop(j)
+                    swaps.pop(i)
                     return True
                 if sw[0] not in elems and sw[1] not in elems:
                     continue
@@ -1050,6 +1058,7 @@ class EmbedHelper(object):
         #        if key not in current:
         #            current[key] = post[key]
 
+        optSegments.reverse()
         return optSegments, cost
 
 
@@ -1121,11 +1130,12 @@ class EmbedHelper(object):
                     arg0 = optSegments[segment][0][arg0]
                     arg1 = optSegments[segment][0][arg1]  # TODO test this part, I never got to it
 
-                    if isinstance(QCircuit.data[i], qiskit.Measure):
+                    if isinstance(QCircuit.data[i], qiskit._measure.Measure):
                         instr = "NewCircuit." + command + "(q[" + str(arg0) + "], c[" + str(arg1) + "])"
                     else:
                         instr = "NewCircuit." + command + "(q[" + str(arg0) + "], q[" + str(arg1) + "])"
-                    #print(instr)
+
+                    print(instr)
                     exec(instr)
 
 
