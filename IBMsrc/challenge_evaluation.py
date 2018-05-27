@@ -32,12 +32,12 @@ import sys, os, traceback
 
 GLOBAL_TIMEOUT = 3600
 ERROR_LIMIT = 1e-10
-from qiskit import QuantumProgram
-from qiskit.unroll import Unroller, DAGBackend
-from qiskit._openquantumcompiler import dag2json
+#from qiskit import QuantumProgram
+#from qiskit.unroll import Unroller, DAGBackend
+#from qiskit._openquantumcompiler import dag2json
 from multiprocessing import Pool
 from qiskit.mapper._mappererror import MapperError
-from qiskit.tools.qi.qi import state_fidelity
+#from qiskit.tools.qi.qi import state_fidelity
 
 
 

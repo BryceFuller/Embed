@@ -2,6 +2,7 @@ import copy
 from qiskit import QuantumCircuit, QuantumProgram
 import qiskit
 import inspect
+import heapq as H
 import collections
 
 """
@@ -21,10 +22,8 @@ EX: COMPLICATED_GATE(q[1], q[4], c[3], q[71])
 class Instruction(object):
 
     def __init__(self, instruction):
-        print(inspect.getfile(qiskit))
+        #print(inspect.getfile(qiskit))
         self.operation = instruction.name
-
-
         self.qubits = []
         self.bits = []
         for i in range(0,len(instruction.arg)):
@@ -46,7 +45,6 @@ class Segment(object):
         self.startIndex = start
         self.endIndex = end
 
-
 """
 General tools needed by EmbedAlgorithm
 """
@@ -56,8 +54,6 @@ class EmbedHelper(object):
     Hcost = 1
 
     def __init__(self, QCircuit, coupling):
-        #print("init")
-       # self.Instruction = Instruction
         self.Segment = Segment
         self.Coupling = self.cleanCoupling(coupling)
         self.UndirectedCoupling = self.directedToUndirected(coupling)
@@ -68,6 +64,7 @@ class EmbedHelper(object):
         self.HasCycles = self.hasCycles()
 
 
+    #Change all values of a dict to be tuples
     def cleanCoupling(self, coupling):
         NewCoupling = {}
         for key in coupling.keys():
@@ -91,36 +88,41 @@ class EmbedHelper(object):
                         UndirectedCoupling[value] = UndirectedCoupling[value] + (key,)
                 else:
                     UndirectedCoupling[value] = (key,)
-        #for key in UndirectedCoupling.keys():
-        #    UndirectedCoupling[key] = tuple(UndirectedCoupling[key])
-
         return UndirectedCoupling
 
+    #Indicate whether or not this graph has cycles
     def hasCycles(self):
         available = set()
         visited = set()
-        node = list(self.UndirectedCoupling)[0]
         traceback = {}
+
+        node = list(self.UndirectedCoupling)[0]
+        for i in self.UndirectedCoupling[node]:
+            available.add(i)
+            traceback[i] = node
+        visited.add(node)
+
         while len(available) > 0:
+            node = available.pop()
             visited.add(node)
             for i in self.UndirectedCoupling[node]:
-                if (i in visited) and (traceback[node] != i):
-                    return True
-                available.add((node, i))
-            newnode = available.pop()
-            traceback[newnode[1]] = newnode[0]
-            node = newnode[1]
+                if (i in visited):
+                    if (traceback[node] != i):
+                        return True
+                else:
+                    available.add(i)
+                    traceback[i] = node
+            node = available.pop()
 
         return False
 
+    #Can qubit1 control onto qubit2, returns boolean value
     def isValid(self, qubit1, qubit2):
-
         if qubit1 in self.Coupling and qubit2 in self.Coupling[qubit1]:
             return True
-
-        #TODO Fill this in.
         return False
 
+    #Convert QCircuit object to intermediate representation
     def reformatInstructions(self, QCircuit):
         result = []
         for i in range(0, len(QCircuit.data)):
@@ -146,7 +148,6 @@ class EmbedHelper(object):
 
     def getSegment(self, start, end, subsegment=None):
 
-
         forwardStart = start
 
         if subsegment != None:
@@ -164,16 +165,15 @@ class EmbedHelper(object):
             if (start < subsegment.startIndex):
                 self.extendBackward()
 
-
         return newSegment
 
     def extendForward(self, start, end, subsegment):
-
 
         for instr in range(start, end+1):
 
             Instruction = self.Instructions[instr];
 
+            #TODO make this for single qubit gates only
             if (Instruction.operation != "cx"):
                 subsegment.endIndex = subsegment.endIndex + 1
                 continue
@@ -182,7 +182,6 @@ class EmbedHelper(object):
             # qubit are constrained to a particular value for each mapping.
             startFixed = False
             endFixed = False
-
 
             control = Instruction.qubits[0]
             target = Instruction.qubits[1]
@@ -225,7 +224,6 @@ class EmbedHelper(object):
                             subsegment.endIndex = instr;
                     continue
 
-
                 if (startFixed == True) & (endFixed == False):
                     qubit1 = map[control]
                     if(qubit1 not in self.Coupling):
@@ -250,26 +248,102 @@ class EmbedHelper(object):
             if(len(newMaps) != 0):
                 subsegment.global_maps = newMaps;
 
-    def extendBackward(self):
-        print()
+    def extendBackward(self, start, end, subsegment):
+        for instr in range(start - 1, end):
+
+            Instruction = self.Instructions[instr];
+
+            if (len(Instruction.qubits) == 1):
+                subsegment.endIndex = subsegment.endIndex + 1
+                continue
+
+            #These two flags specify whether or not the target or control
+            # qubit are constrained to a particular value for each mapping.
+            startFixed = False
+            endFixed = False
+
+            control = Instruction.qubits[0]
+            target = Instruction.qubits[1]
+            newMaps = []
+
+            for map in subsegment.global_maps:
+
+                # Set Flags
+                if (control in map.keys()):
+                    startFixed = True
+                if (target in map.keys()):
+                    endFixed = True
+
+                #Get Embeddings
+                if (startFixed == False) & (endFixed == False):
+                    for qubit1 in self.Coupling:
+                        if qubit1 in map.values():
+                            continue
+                        for qubit2 in self.Coupling[qubit1]:
+                            if qubit2 in map.values():
+                                continue
+                            if self.isValid(qubit1, qubit2):
+                                newMap = copy.deepcopy(map)
+                                newMap[control] = qubit1
+                                newMap[target] = qubit2
+                                newMaps.append(newMap)
+                                subsegment.startIndex = instr;
+                    continue
+
+                if (startFixed == False) & (endFixed == True):
+                    qubit2 = map[target]
+
+                    for qubit1 in self.Coupling:
+                        if qubit1 in map.values():
+                            continue
+                        if self.isValid(qubit1, qubit2):
+                            newMap = copy.deepcopy(map)
+                            newMap[control] = qubit1
+                            newMaps.append(newMap)
+                            subsegment.startIndex = instr;
+                    continue
+
+
+                if (startFixed == True) & (endFixed == False):
+                    qubit1 = map[control]
+                    if(qubit1 not in self.Coupling):
+                        continue;
+                    for qubit2 in self.Coupling[qubit1]:
+                        if qubit2 in map.values():
+                            continue
+                        if self.isValid(qubit1, qubit2):
+                            newMap = copy.deepcopy(map)
+                            newMap[target] = qubit2
+                            newMaps.append(newMap)
+                            subsegment.startIndex = instr;
+                    continue
+
+                if (startFixed == True) & (endFixed == True):
+                    qubit1 = map[control]
+                    qubit2 = map[target]
+                    if self.isValid(qubit1, qubit2):
+                        newMaps.append(map)
+                        subsegment.startIndex = instr;
+                    continue
+            if(len(newMaps) != 0):
+                subsegment.global_maps = newMaps;
 
 
 
 
-    #inputs are found mappings mapA, mapB
-    # as well as the inverted equivalent of mapA mapB
-    #Output is a tuple containing the minimmized MapA' MapB' and cost
+    #inputs are mappings mapA, mapB
+    # as well as the inverted versions of mapA mapB
+    #Output is a tuple containing the minimmized MapA' MapB',
+    # MapA and MapB's inverses, the cost, and the swap sequence
+    # which transforms from MapA to MapB
     #Calculates cost of transforming from mapA to mapB
-    #TODO Test finalMapB functionality
-    #TODO Test cost function
+
     def cost(self, prevcost, traceback,  startmapA, startmapB):
 
         cost = 0
         #Maps logial qubit to physical qubit
         MapB = copy.deepcopy(startmapB)
         MapA = copy.deepcopy(startmapA)
-        #Note, it is possible to pass in and store all of the inverted maps
-        #Inv maps Physical Qubit to Logical Qubit
         InvA = self.invertMap(MapA)
         InvB = self.invertMap(MapB)
 
@@ -345,10 +419,6 @@ class EmbedHelper(object):
                         UnusedA.remove(V)
                         break
 
-        #Fail fast measure
-       # if MapA.keys() not in MapB.keys():
-       #     if MapB.keys() not in MapA.keys():
-       #         assert Exception
 
 
         #NOTE a choice was made here.
@@ -407,7 +477,7 @@ class EmbedHelper(object):
         InvKeys = InvA.keys() | InvB.keys()
 
         if self.HasCycles == True:
-            mst = self.MST()
+            mst = self.MST(MapA.values())
         else:
             mst = None
 
@@ -466,9 +536,9 @@ class EmbedHelper(object):
         #DISTILL SWAP GATES
         oldswaps = copy.deepcopy(swaps)
         swaps = self.distillSwaps(swaps)
+
         if not self.verifySwapDistillation(oldswaps, swaps):
             assert Exception
-
 
         for swap in swaps:
             forward  = False
@@ -494,7 +564,6 @@ class EmbedHelper(object):
         a = None
         b = None
         c = None
-        # print("Initial len = " + str(len(swaps)))
 
         #Debugging stuff
         swaps2 = copy.deepcopy(swaps)
@@ -502,28 +571,22 @@ class EmbedHelper(object):
         #/////////
 
         while True:
-           swaps4 = copy.deepcopy(swaps3)
-           self.simplifyOnce(swaps3)
-           if not self.verifySwapDistillation(swaps2,swaps3):
-               print("SHIT")
-           if not self.simplifyOnce(swaps):
-               break
-           if not self.verifySwapDistillation(swaps2, swaps):
-               assert Exception
+            swaps4 = copy.deepcopy(swaps3)
+            self.simplifyOnce(swaps3)
+            if not self.verifySwapDistillation(swaps2,swaps3):
+                print("not good")
+                assert Exception
+                print("should be unreachable")
+                return swaps4
+            if not self.simplifyOnce(swaps):
+                break
+            if not self.verifySwapDistillation(swaps2, swaps):
+                assert Exception
         # print("-> " + str(len(swaps)))
         return swaps
 
 
 
-
-                #If element+1 defined:
-                    #Try to translate Up? (For each permutation)
-
-                    #For all downstream permutations (including identity permutation),
-
-                    #Translate Down?
-
-                #
     def simplifyOnce(self, swaps):
 
         for sw in range(len(swaps)):
@@ -531,8 +594,6 @@ class EmbedHelper(object):
             T1Elems = set()
             T1Elems.add(swaps[sw][0])
             T1Elems.add(swaps[sw][1])
-
-            #TODO Can I translate this swap up or down to get a cancellation?
 
             # If there's an identity mapping...
             if len(T1Elems) == 1:
@@ -551,8 +612,6 @@ class EmbedHelper(object):
 
             else:
                 permutable1 = False
-
-
 
             # i, i+1 can be permuted
             if permutable1:
@@ -586,18 +645,29 @@ class EmbedHelper(object):
 
                 # i+2, i+3 are not permutable
                 else:
-                    if self.checkTranslation(swaps, (elems1[0],elems1[1]), sw, True): return True
-                    if self.checkTranslation(swaps, (elems1[0], elems1[2]), sw, True): return True
-                    if self.checkTranslation(swaps, (elems1[1], elems1[2]), sw, True): return True
-                    if self.checkTranslation(swaps, (elems1[0], elems1[1]), sw+1, False): return True
-                    if self.checkTranslation(swaps, (elems1[0], elems1[2]), sw+1, False): return True
-                    if self.checkTranslation(swaps, (elems1[1], elems1[2]), sw+1, False): return True
+                    if self.checkTranslation(swaps, (elems1[0],elems1[1]), sw, True):
+                        swaps[sw - 1] = (elems1[0],elems1[2])
+                        return True
+                    if self.checkTranslation(swaps, (elems1[0], elems1[2]), sw, True):
+                        swaps[sw - 1] = (elems1[1], elems1[2])
+                        return True
+                    if self.checkTranslation(swaps, (elems1[1], elems1[2]), sw, True):
+                        swaps[sw - 1] = (elems1[0], elems1[1])
+                        return True
+                    if self.checkTranslation(swaps, (elems1[0], elems1[1]), sw+1, False):
+                        swaps[sw-2] = (elems1[1], elems1[2])
+                        return True
+                    if self.checkTranslation(swaps, (elems1[0], elems1[2]), sw+1, False):
+                        swaps[sw-2] = (elems1[1], elems1[2])
+                        return True
+                    if self.checkTranslation(swaps, (elems1[1], elems1[2]), sw+1, False):
+                        swaps[sw-2] = (elems1[0], elems1[1])
+                        return True
 
             else: #i,i+1 cannot be permuted, so check for translations
                 if self.checkTranslation(swaps, swaps[sw], sw, True): return True
                 if self.checkTranslation(swaps, swaps[sw], sw, False): return True
         return False
-
 
     def canPermute(self, swap1, swap2):
         Elems1, Elems2 = set(), set()
@@ -626,7 +696,7 @@ class EmbedHelper(object):
                 elems.add(swaps[i - j][0])
                 elems.add(swaps[i - j][1])
                 if sw[0] in elems and sw[1] in elems:
-                    swaps.pop(j)
+                    swaps.pop(i)
                     swaps.pop(i-j)
                     return True
                 if sw[0] not in elems and sw[1] not in elems:
@@ -672,10 +742,18 @@ class EmbedHelper(object):
             return False
         return True
 
-    #Takes in a list of target nodes and returns an undirected MST between those nodes.
-    def MST(coupling, targs):
-        MST = {}
+    def score(self, coupling, targets, node):
+        score = 0
+        # print(coupling, targets, node)
+        for i in self.UndirectedCoupling[node]:
+            if i in targets:
+                score = score + 1
+        return score
 
+    #Takes in a list of target nodes and returns an undirected MST between those nodes.
+    def MST(self, targs):
+        MST = {}
+        UC = self.UndirectedCoupling
         if len(targs) == 0:
             assert Exception
 
@@ -690,27 +768,25 @@ class EmbedHelper(object):
 
             for i in UC[target]:
                 if i not in visited:
-                    Score = float(1 / (score(UC, targs, i) + tscore))
+                    Score = float(1 / (self.score(UC, targs, i) + tscore))
                     H.heappush(accessible, (Score, (i, target)))
 
             Min = H.heappop(accessible)
             VisitedNode = Min[1][1]
             NewNode = Min[1][0]
 
-            if NewNode in MST:
-                assert Exception
-            if VisitedNode not in MST:
-                MST[VisitedNode] = (NewNode,)
-            else:
-                MST[VisitedNode] = MST[VisitedNode] + (NewNode,)
-            MST[NewNode] = (VisitedNode,)
+            if NewNode not in MST.keys():
+                if VisitedNode not in MST:
+                    MST[VisitedNode] = (NewNode,)
+                else:
+                    MST[VisitedNode] = MST[VisitedNode] + (NewNode,)
+                MST[NewNode] = (VisitedNode,)
 
             target = Min[1][0]
             if target in targets:
                 targets.remove(target)
 
         return MST
-
 
     def invertMap(self, map):
         invMap = {}
@@ -722,7 +798,6 @@ class EmbedHelper(object):
     def costOfPath(self, path):
         cost = 0;
         node = path.pop()
-
 
         while path:
             nextNode = path.pop()
@@ -741,10 +816,7 @@ class EmbedHelper(object):
             else:
                 cost += (self.CXcost * 3 + self.Hcost * 4) * 2
 
-
             node = nextNode
-
-
 
 
     #Take as input a start qubit and
@@ -810,7 +882,10 @@ class EmbedHelper(object):
                     # DO actual memoization with costs
                     for source in range(len(sources)):
                         # costs = (self.cost(sources[source][0], source, sources[source][4], nodemap))
+                        if sources[source] == None:
+                            continue
                         costs = (self.cost(sources[source][0], source, sources[source][4], nodemap))
+
                         # costs[0] = costs[0] + sources[source][0]
                         if min == None:
                             min = costs
@@ -819,7 +894,8 @@ class EmbedHelper(object):
                     return min
                 if (type(sources[0]) == dict):
                     for source in range(len(sources)):
-                        #print(source)
+                        if sources[source] == None:
+                            continue
                         costs = self.cost(0, source, sources[source], nodemap)
                         # costs[0] = costs[0] + sources[source][0]
                         if min == None:
@@ -829,6 +905,8 @@ class EmbedHelper(object):
                     return min
                 if (type(sources[0]) == list):
                     for source in range(len(sources)):
+                        if sources[source] == None:
+                            continue
                         costs = self.memoize(nodemap, sources[source], 0);
                         if min == None:
                             min = costs
@@ -838,9 +916,10 @@ class EmbedHelper(object):
             else:
                 if (type(sources) == tuple):
                     return self.cost(sources[0], -1, sources[4], nodemap)
+
                 if (type(sources) == dict):
                     return self.cost(0, -1, sources, nodemap)
-                assert Exception("Memoize called with type(sources) != list of tuples or dicts")
+                #assert Exception("Memoize called with type(sources) != list of tuples or dicts")
 
         else:
             nodeArray = []
@@ -849,13 +928,19 @@ class EmbedHelper(object):
             return nodeArray
 
     def getMin(self, node):
+        if node == None:
+            return None
         if type(node) == tuple:
             return node, ()
         if type(node) == list:
             minI = 0
             min = None
             for i in range(len(node)):
+                if node[i] == None:
+                    continue
                 mapping, prevI = self.getMin(node[i])
+                if mapping == None:
+                    continue
                 if min == None:
                     min = mapping
                     minI = (i,) + prevI
@@ -875,11 +960,10 @@ class EmbedHelper(object):
             # return searchSpace[location[0]]
             assert Exception  # Should never get here. Tracebacks of -1 are not appended.
         else:
-            # TODO This is very broken indeed!
+
             element = self.grabElement(searchSpace[location[0]], location[1:])
             return element
-            # This will be recursively defined to go look for elements in arbitrarily depth high nested lists.
-            # if
+
 
     #Traceback written for k=0 only
     def traceback1(self, qubitMappings):
@@ -910,19 +994,11 @@ class EmbedHelper(object):
                 continue
 
             else:
-                # index = nextIndex + prevSeg[1]
                 nextIndex = nextIndex + (prevSeg[1],)
                 prevSeg = self.grabElement(qubitMappings[segment], nextIndex)
                 optSegs.append((prevSeg[3], prevSeg[2]))
                 continue
 
-            #if type(prevSeg) == dict:
-            #    prevSeg = self.g
-            #    optSegs.append(prevSeg)
-            #    continue
-            #if type(prevSeg) == tuple:
-            #    optSegs.append(prevSeg)
-            #    continue
             assert Exception("Unexpected Type")
         return optSegs, cost
 
@@ -937,7 +1013,7 @@ class EmbedHelper(object):
 
         # Fill out the memoization table
         for segment in range(0, len(segments)):
-            if (self.Verbose): print("Generating layer ", segment, " in memoization table")
+            #if (self.Verbose): print("Generating layer ", segment, " in memoization table")
             qubitMappings.append([])
 
             if segment == 0:
@@ -949,16 +1025,7 @@ class EmbedHelper(object):
 
                 endmap = segments[segment].global_maps[node]
                 qubitMappings[segment].append([])
-                #min = self.cost(0,0,segments[segment-1].global_maps[0],segments[segment].global_maps[node])
-                #for prevnode in range(len(segments[segment-1].global_maps)):
-                #    getcost = self.cost(0, 0, segments[segment - 1].global_maps[0], segments[segment].global_maps[node])
-                #    if getcost[0] < min[0]:
-                #        min = getcost
-                #qubitMappings[segment].append(min)
-
                 qubitMappings[segment][node] = self.memoize(endmap, qubitMappings[segment - 1],0)
-
-
 
         #Find end node that minimizes cost
         minCost, minIndex = 0, 0
@@ -998,7 +1065,7 @@ class EmbedHelper(object):
 
     def selectSegments(self, segments, k=None):
 
-        if (self.Verbose): print("Selecting Segment Mappings")
+       # if (self.Verbose): print("Selecting Segment Mappings")
         # if k==None
         # traceback = []
         # costs = []
@@ -1010,7 +1077,7 @@ class EmbedHelper(object):
             return segments[0].global_maps[0]
         # Fill out the memoization table
         for segment in range(0, len(segments)):
-            if(self.Verbose): print("Generating layer ", segment, " in memoization table")
+            #if(self.Verbose): print("Generating layer ", segment, " in memoization table")
             qubitMappings.append([])
             # costs[segment] = []
             # traceback[segment] = []
@@ -1026,12 +1093,12 @@ class EmbedHelper(object):
                 nodemap = segments[segment].global_maps[node]
                 qubitMappings[segment].append([])
 
-                keff = min(k, segment - 1)
+                #keff = min(k, segment - 1)
+                keff = min(k, segment)
 
                 qubitMappings[segment][node] = self.memoize(nodemap, qubitMappings[segment - 1], keff)
 
-        # Previous work
-        # Min = self.getMin(qubitMappings[-1])
+
         optSegments, cost = self.traceback2(qubitMappings)
 
         for mapping in range(1,len(optSegments)):
@@ -1044,19 +1111,6 @@ class EmbedHelper(object):
                         assert Exception
                 else:
                     mapA[key] = mapB[key]
-
-        # backpropogate the optimal mapping information into previous segments.
-        #backpropSegments = []
-        #backpropSegments.append((optSegments[0][4], list()))
-        #for segment in range(len(optSegments) - 1):
-        #    backpropSegments.append((optSegments[segment][3], optSegments[segment][2]))
-#
-#        for mapping in range(1, len(backpropSegments)):
-#            current = backpropSegments[mapping][0]
-        #    post = backpropSegments[mapping - 1][0]
-        #    for key in post:
-        #        if key not in current:
-        #            current[key] = post[key]
 
         optSegments.reverse()
         return optSegments, cost
@@ -1135,7 +1189,7 @@ class EmbedHelper(object):
                     else:
                         instr = "NewCircuit." + command + "(q[" + str(arg0) + "], q[" + str(arg1) + "])"
 
-                    print(instr)
+                    #print(instr)
                     exec(instr)
 
 
