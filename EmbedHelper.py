@@ -534,11 +534,11 @@ class EmbedHelper(object):
                     swaps.append((path[-i-2],path[-i-1]))
 
         #DISTILL SWAP GATES
-        oldswaps = copy.deepcopy(swaps)
-        swaps = self.distillSwaps(swaps)
+        #oldswaps = copy.deepcopy(swaps)
+        #swaps = self.distillSwaps(swaps)
 
-        if not self.verifySwapDistillation(oldswaps, swaps):
-            assert Exception
+        #if not self.verifySwapDistillation(oldswaps, swaps):
+        #    assert Exception
 
         for swap in swaps:
             forward  = False
