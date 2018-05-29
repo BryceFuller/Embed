@@ -2,7 +2,7 @@
 import sys
 
 from EmbedHelper import EmbedHelper
-from EmbedAlgorithm import Greedy, getPermutations
+from EmbedAlgorithm import Greedy
 
 
 if sys.version_info < (3, 5):
