@@ -565,6 +565,7 @@ class EmbedHelper(object):
         b = None
         c = None
 
+        '''
         #Debugging stuff
         swaps2 = copy.deepcopy(swaps)
         swaps3 = copy.deepcopy(swaps)
@@ -584,7 +585,7 @@ class EmbedHelper(object):
                 assert Exception
         # print("-> " + str(len(swaps)))
         return swaps
-
+        '''
 
 
     def simplifyOnce(self, swaps):
